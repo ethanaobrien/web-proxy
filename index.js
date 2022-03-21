@@ -205,6 +205,6 @@ var server = http.createServer(async function(req, res) {
         body[1].pipe(res);
     }
 })
-server.listen(3000, () => {
+server.listen(process.env.PORT, () => {
     console.log('server started');
 });
