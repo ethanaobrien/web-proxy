@@ -1,6 +1,7 @@
 
 const https = require('https');
 const http = require('http');
+let port = 3000;
 const sites = [ //no '/' at end
     'http://mikudb.moe',
     'https://nyaa.si',
@@ -17,7 +18,13 @@ const sites = [ //no '/' at end
     'https://www.instagram.com' //broken, to fix
 ]
 let site2Proxy = sites[2];
-let proxyOutsideSites = true;
+
+/**
+ TODO
+  1. Site proxy selection config per user - set a cookie header containing the site being proxied
+
+*/
+
 
 function fetch(method, url, headers, body) {
 	return new Promise(function(resolve, reject) {
@@ -82,9 +89,6 @@ function fetch(method, url, headers, body) {
 function parseTextFile(body, isHtml) {
     //todo- only replace src urls
     body = body.replaceAll(site2Proxy+'/', '/').replaceAll(site2Proxy, '').replaceAll(site2Proxy.replaceAll('\\/', '/')+'/', '/').replaceAll(site2Proxy.replaceAll('\\/', '/'), '').replaceAll('discord', 'discordddd');
-    if (!proxyOutsideSites) {
-        return body;
-    }
     if (isHtml) {
         var a = body.split('src');
         for (var i=1; i<a.length; i++) {
@@ -165,7 +169,8 @@ var server = http.createServer(async function(req, res) {
         return;
     }
     var url = req.url.startsWith('/http') ? req.url.substr(1) : site2Proxy+req.url;
-    var vc = transformArgs(req.url).vc
+    var args = transformArgs(req.url);
+    var vc = args.vc;
     if (vc == 'true' || vc == '1') {
         url = url.split('?')[0];
     }
@@ -188,7 +193,7 @@ var server = http.createServer(async function(req, res) {
         return;
     }
     for (var k in body[3]) {
-        if (['content-length', 'transfer-encoding'].includes(k.toLowerCase())) {
+        if (['transfer-encoding'].includes(k) || (k === 'content-length' && body[0] === true)) {
             continue
         }
         if (k === 'set-cookie') {
@@ -204,7 +209,7 @@ var server = http.createServer(async function(req, res) {
             }
             continue;
         }
-        if (typeof body[3][k] == 'string' && proxyOutsideSites) {
+        if (typeof body[3][k] == 'string') {
             res.setHeader(k, body[3][k].replaceAll(site2Proxy+'/', '/').replaceAll(site2Proxy, '').replaceAll('http', '/http'));
         } else {
             res.setHeader(k, body[3][k]);
@@ -217,11 +222,36 @@ var server = http.createServer(async function(req, res) {
     if (body[0] === true) {
         //javascript/html parsing
         body = parseTextFile(body[1], body[2].includes('html'));
+        if (args.video && ['1', 'true'].includes(args.video)) {
+            var videoUrl = ('/'+body.split('">View High Qual')[0].split('href="').pop());
+            res.setHeader('location', videoUrl);
+            res.writeHead(307);
+            res.end();
+            return;
+        }
         res.end(body);
     } else {
         body[1].pipe(res);
     }
 })
-server.listen(process.env.PORT || 3000, () => {
-    console.log('server started');
+server.on('clientError', function (err, socket) {
+    if (err.code === 'ECONNRESET' || !socket.writable) {
+        return;
+    }
+    socket.end('HTTP/1.1 400 Bad Request\r\n\r\n');
 });
+server.on('listening', function() {
+    console.log('listening on port '+(process.env.PORT || port || 3000));
+})
+function tryListen() {
+    console.log('trying to listen on port '+(process.env.PORT || port || 3000));
+    server.listen(process.env.PORT || port || 3000);
+}
+server.on('error', function(e) {
+    if (e.code === 'EADDRINUSE') {
+        console.log('failed to listen on port '+(process.env.PORT || port || 3000));
+        port++;
+        tryListen();
+    }
+})
+tryListen(port);
