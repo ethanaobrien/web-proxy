@@ -188,8 +188,12 @@ var server = http.createServer(async function(req, res) {
     }
     var url = req.url.startsWith('/http') ? req.url.substring(1) : site2Proxy+req.url;
     var args = transformArgs(req.url);
-    url = removeArg(url, 'vc');
-    url = removeArg(url, 'video');
+    if (args.vc) {
+        url = removeArg(url, 'vc');
+    }
+    if (args.url) {
+        url = removeArg(url, 'video');
+    }
     var vc = args.vc;
     var reqBody = await new Promise(function(resolve, reject) {
         var body = Buffer.from('')
