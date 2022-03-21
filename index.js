@@ -206,6 +206,10 @@ var server = http.createServer(async function(req, res) {
             res.setHeader(k, body[3][k]);
         }
     }
+    var vc = transformArgs(req.url).vc
+    if (vc == 'true' || vc == '1') {
+        res.setHeader('content-type', 'text/plain')
+    }
     res.writeHead(body[4] || 200);
     if (body[0] === true) {
         //javascript/html parsing
