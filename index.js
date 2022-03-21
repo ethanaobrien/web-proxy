@@ -165,6 +165,10 @@ var server = http.createServer(async function(req, res) {
         return;
     }
     var url = req.url.startsWith('/http') ? req.url.substr(1) : site2Proxy+req.url;
+    var vc = transformArgs(req.url).vc
+    if (vc == 'true' || vc == '1') {
+        url = url.split('?')[0];
+    }
     var reqBody = await new Promise(function(resolve, reject) {
         var body = Buffer.from('')
         req.on('data', (chunk) => {
@@ -206,7 +210,6 @@ var server = http.createServer(async function(req, res) {
             res.setHeader(k, body[3][k]);
         }
     }
-    var vc = transformArgs(req.url).vc
     if (vc == 'true' || vc == '1') {
         res.setHeader('content-type', 'text/plain')
     }
