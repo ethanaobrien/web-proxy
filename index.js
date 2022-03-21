@@ -14,10 +14,9 @@ const sites = [ //no '/' at end
     'https://myemulator.online',
     'https://hack64.net',
     'https://www.roblox.com',
-    'https://www.xvideos.com',
     'https://www.instagram.com' //broken, to fix
 ]
-let site2Proxy = sites[1];
+let site2Proxy = sites[2];
 let proxyOutsideSites = true;
 
 function fetch(method, url, headers, body) {
@@ -126,12 +125,22 @@ function transformArgs(url) {
 function changeHtml(req, res) {
     if (req.url.includes('?')) {
         var args = transformArgs(req.url);
-        if (args.site && sites.includes(decodeURIComponent(args.site))) {
-            site2Proxy = decodeURIComponent(args.site);
-            res.setHeader('location', '/');
-            res.writeHead(307);
-            res.end();
-            return;
+        var error = false;
+        if (args.site || args.custom) {
+            if (args.custom) {
+                try {
+                    new URL(decodeURIComponent(args.custom))
+                } catch(e) {
+                    error = true;
+                }
+            }
+            if (!error) {
+                site2Proxy = args.custom ? decodeURIComponent(args.custom) : decodeURIComponent(args.site);
+                res.setHeader('location', '/');
+                res.writeHead(307);
+                res.end();
+                return;
+            }
         }
     }
     res.setHeader('content-type', 'text/html; chartset=utf-8')
@@ -140,7 +149,7 @@ function changeHtml(req, res) {
     for (var i=0; i<sites.length; i++) {
         html += '<input type="radio" id="'+encodeURIComponent(sites[i])+'" name="site" value="'+encodeURIComponent(sites[i])+'"><label for="'+encodeURIComponent(sites[i])+'">'+sites[i]+'</label><br>';
     }
-    html += '<br><input type="submit" value="Submit"><ul></ul>'
+    html += '<br><label for="custom">Custom URL</label><input type="text" id="custom" name="custom"><br><br><input type="submit" value="Submit"><ul></ul>'
     res.end(html)
 }
 
@@ -206,6 +215,6 @@ var server = http.createServer(async function(req, res) {
         body[1].pipe(res);
     }
 })
-server.listen(process.env.PORT, () => {
+server.listen(process.env.PORT || 3000, () => {
     console.log('server started');
 });
