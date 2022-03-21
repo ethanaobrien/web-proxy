@@ -205,6 +205,7 @@ var server = http.createServer(async function(req, res) {
     try {
         var body = await fetch(req.method, url, req.headers, reqBody, site2Proxy)
     } catch(e) {
+        console.log(e)
         res.writeHead(404);
         res.end('error');
         return;
