@@ -17,7 +17,6 @@ const sites = [ //no '/' at end
     'https://www.roblox.com',
     'https://www.instagram.com' //broken, to fix
 ]
-let site2Proxy = sites[2];
 
 /**
  TODO
@@ -26,7 +25,7 @@ let site2Proxy = sites[2];
 */
 
 
-function fetch(method, url, headers, body) {
+function fetch(method, url, headers, body, site2Proxy) {
 	return new Promise(function(resolve, reject) {
         var newHeaders = {};
         if (headers) {
@@ -86,7 +85,7 @@ function fetch(method, url, headers, body) {
 	})
 }
 
-function parseTextFile(body, isHtml) {
+function parseTextFile(body, isHtml, site2Proxy) {
     //todo- only replace src urls
     body = body.replaceAll(site2Proxy+'/', '/').replaceAll(site2Proxy, '').replaceAll(site2Proxy.replaceAll('\\/', '/')+'/', '/').replaceAll(site2Proxy.replaceAll('\\/', '/'), '').replaceAll('discord', 'discordddd');
     if (isHtml) {
@@ -133,13 +132,19 @@ function changeHtml(req, res) {
         if (args.site || args.custom) {
             if (args.custom) {
                 try {
-                    new URL(decodeURIComponent(args.custom))
+                    var newURL = new URL('/', args.custom);
+                    newURL = newURL.toString();
+                    console.log(newURL)
+                    if (newURL.endsWith('/')) {
+                        newURL = newURL.substring(0, newURL.length-1);
+                    }
+                    args.custom = newURL;
                 } catch(e) {
                     error = true;
                 }
             }
             if (!error) {
-                site2Proxy = args.custom ? decodeURIComponent(args.custom) : decodeURIComponent(args.site);
+                res.setHeader('set-cookie', 'proxySite='+(args.site ? args.site : encodeURIComponent(args.custom)));
                 res.setHeader('location', '/');
                 res.writeHead(307);
                 res.end();
@@ -162,13 +167,18 @@ var server = http.createServer(async function(req, res) {
         changeHtml(req, res);
         return;
     }
+    var site2Proxy;
+    if (req.headers.cookie && req.headers.cookie.includes('proxySite=')) {
+        site2Proxy = decodeURIComponent(req.headers.cookie.split('proxySite=').pop().split(';')[0]);
+    }
+    //console.log(site2Proxy);
     if (! site2Proxy) {
         res.setHeader('location', '/changeSiteToServe');
         res.writeHead(307);
         res.end();
         return;
     }
-    var url = req.url.startsWith('/http') ? req.url.substr(1) : site2Proxy+req.url;
+    var url = req.url.startsWith('/http') ? req.url.substring(1) : site2Proxy+req.url;
     var args = transformArgs(req.url);
     var vc = args.vc;
     if (vc == 'true' || vc == '1') {
@@ -186,7 +196,7 @@ var server = http.createServer(async function(req, res) {
         })
     })
     try {
-        var body = await fetch(req.method, url, req.headers, reqBody)
+        var body = await fetch(req.method, url, req.headers, reqBody, site2Proxy)
     } catch(e) {
         res.writeHead(404);
         res.end('error');
@@ -221,7 +231,7 @@ var server = http.createServer(async function(req, res) {
     res.writeHead(body[4] || 200);
     if (body[0] === true) {
         //javascript/html parsing
-        body = parseTextFile(body[1], body[2].includes('html'));
+        body = parseTextFile(body[1], body[2].includes('html'), site2Proxy);
         if (args.video && ['1', 'true'].includes(args.video)) {
             var videoUrl = ('/'+body.split('">View High Qual')[0].split('href="').pop());
             res.setHeader('location', videoUrl);
