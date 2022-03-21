@@ -14,6 +14,7 @@ const sites = [ //no '/' at end
     'https://myemulator.online',
     'https://hack64.net',
     'https://www.roblox.com',
+    'https://www.xvideos.com',
     'https://www.instagram.com' //broken, to fix
 ]
 let site2Proxy = sites[1];
