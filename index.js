@@ -125,6 +125,14 @@ function transformArgs(url) {
     return args
 }
 
+function removeArg(url, argName) {
+    if (! url.includes(argName)) {
+        return url;
+    }
+    var a = url.split(argName).pop().split('&')[0];
+    return url.replace(argName+a, '')
+}
+
 function changeHtml(req, res) {
     if (req.url.includes('?')) {
         var args = transformArgs(req.url);
@@ -180,10 +188,9 @@ var server = http.createServer(async function(req, res) {
     }
     var url = req.url.startsWith('/http') ? req.url.substring(1) : site2Proxy+req.url;
     var args = transformArgs(req.url);
+    url = removeArg(url, 'vc');
+    url = removeArg(url, 'video');
     var vc = args.vc;
-    if (vc == 'true' || vc == '1') {
-        url = url.split('?')[0];
-    }
     var reqBody = await new Promise(function(resolve, reject) {
         var body = Buffer.from('')
         req.on('data', (chunk) => {
@@ -232,7 +239,7 @@ var server = http.createServer(async function(req, res) {
     if (body[0] === true) {
         //javascript/html parsing
         body = parseTextFile(body[1], body[2].includes('html'), site2Proxy);
-        if (args.video && ['1', 'true'].includes(args.video)) {
+        if (args.video && ['1', 'true'].includes(args.video) && body.includes('View High Qual')) {
             var videoUrl = ('/'+body.split('">View High Qual')[0].split('href="').pop());
             res.setHeader('location', videoUrl);
             res.writeHead(307);
