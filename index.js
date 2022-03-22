@@ -18,12 +18,6 @@ const sites = [ //no '/' at end
     'https://www.instagram.com' //broken, to fix
 ]
 
-/**
- TODO
-  1. Site proxy selection config per user - set a cookie header containing the site being proxied
-
-*/
-
 if (! String.prototype.replaceAll) {
     String.prototype.replaceAll = function(a, b) {
         return this.split(a).join(b);
@@ -37,6 +31,9 @@ function fetch(method, url, headers, body, site2Proxy) {
         if (headers) {
             for (var k in headers) {
                 if (k === 'cookie') {
+                    if (k.startsWith('x-replit')) {
+                        continue;
+                    }
                     var cookies = [];
                     var ck = headers[k].split(';');
                     for (var i=0; i<ck.length; i++) {
