@@ -93,6 +93,7 @@ function fetch(method, url, headers, body, site2Proxy) {
 function parseTextFile(body, isHtml, site2Proxy) {
     body = body.replaceAll(site2Proxy+'/', '/').replaceAll(site2Proxy, '').replaceAll(site2Proxy.replaceAll('\\/', '/')+'/', '/').replaceAll(site2Proxy.replaceAll('\\/', '/'), '').replaceAll('discord', 'discordddd');
     if (isHtml) {
+        body = body.replaceAll('integrity=', 'sadfghj=');
         var a = body.split('src');
         for (var i=1; i<a.length; i++) {
             if (a[i].replaceAll(' ', '').replaceAll('"', '').replaceAll("'", '').startsWith('=//')) {
