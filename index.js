@@ -256,6 +256,7 @@ var server = http.createServer(async function(req, res) {
         res.setHeader('content-type', 'text/plain')
     }
     if (body[0] === true) {
+        var code = body[4];
         //javascript/html parsing
         body = parseTextFile(body[1], body[2].includes('html'), site2Proxy);
         if (args.video && ['1', 'true'].includes(args.video) && body.includes('View High Qual')) {
@@ -265,7 +266,7 @@ var server = http.createServer(async function(req, res) {
             res.end();
             return;
         }
-        res.writeHead(body[4] || 200);
+        res.writeHead(code || 200);
         res.end(body);
     } else {
         res.writeHead(body[4] || 200);
