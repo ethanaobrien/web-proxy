@@ -255,7 +255,6 @@ var server = http.createServer(async function(req, res) {
     if (vc == 'true' || vc == '1') {
         res.setHeader('content-type', 'text/plain')
     }
-    res.writeHead(body[4] || 200);
     if (body[0] === true) {
         //javascript/html parsing
         body = parseTextFile(body[1], body[2].includes('html'), site2Proxy);
@@ -266,8 +265,10 @@ var server = http.createServer(async function(req, res) {
             res.end();
             return;
         }
+        res.writeHead(body[4] || 200);
         res.end(body);
     } else {
+        res.writeHead(body[4] || 200);
         body[1].pipe(res);
     }
 })
