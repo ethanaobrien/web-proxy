@@ -2,7 +2,8 @@
 const https = require('https');
 const http = require('http');
 const {ungzip} = require('node-gzip');
-var torrentStream = require('torrent-stream');
+const torrentStream = require('torrent-stream');
+const JSZip = require("jszip");
 let port = 3000;
 const sites = [ //no '/' at end
     'http://mikudb.moe',
@@ -132,17 +133,21 @@ function transformArgs(url) {
 }
 
 function torrent(req, res) {
+    //todo: download all as zip option
     var stage = req.url.split('stage=').pop().split('&')[0];
     var magnet = req.url.split('magnet=').pop();
     var engine = torrentStream('magnet:?'+magnet);
     engine.on('ready', function() {
         var files = engine.files;
+        var torrentName = engine.torrent.name;
         if (stage === 'step1') {
-            var html = '';
+            var html = '<br><ul><h1>Download</h1><br><ul>';
             for (var i=0; i<files.length; i++) {
                 var downloadUrl = '/torrentStream?fileName='+encodeURIComponent(files[i].name)+'&stage=step2&magnet='+magnet;
-                html += '<a href="'+downloadUrl+'">'+files[i].name+'</a>';
+                html += '<li><a href="'+downloadUrl+'">'+files[i].name+'</a></li>';
             }
+            var downloadUrl2 = '/torrentStream?stage=dlAsZip&magnet='+magnet;
+            html += '</ul><br><a href="'+downloadUrl2+'">Download All As Zip</a></ul>';
             engine.destroy();
             res.setHeader('content-type', 'text/html; chartset=utf-8')
             res.writeHead(200);
@@ -156,10 +161,29 @@ function torrent(req, res) {
                     break;
                 }
             }
+            res.setHeader('Content-Disposition', 'attachment; filename="'+encodeURIComponent(fileName)+'"');
+            res.writeHead(200);
             var stream = file.createReadStream();
             stream.pipe(res);
+            stream.on('finish', function() {
+                engine.destroy();
+            })
+        } else if (stage === 'dlAsZip') {
+            var zip = new JSZip();
+            for (var i=0; i<files.length; i++) {
+                zip.file(files[i].name, files[i].createReadStream())
+            }
+            console.log(torrentName)
+            res.setHeader('Content-Disposition', 'attachment; filename="'+encodeURIComponent(torrentName+'.zip')+'"');
+            res.writeHead(200);
+            var stream = zip.generateNodeStream({streamFiles:true});
+            stream.pipe(res);
+            stream.on('finish', function() {
+                engine.destroy();
+            })
         } else {
             res.end('invalid request');
+            engine.destroy();
         }
     })
 }
