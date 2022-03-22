@@ -1,6 +1,7 @@
 
 const https = require('https');
 const http = require('http');
+const {ungzip} = require('node-gzip');
 let port = 3000;
 const sites = [ //no '/' at end
     'http://mikudb.moe',
@@ -25,15 +26,15 @@ if (! String.prototype.replaceAll) {
 }
 
 function fetch(method, url, headers, body, site2Proxy) {
-	return new Promise(function(resolve, reject) {
+    return new Promise(function(resolve, reject) {
         var newHeaders = {};
         var {hostname} = new URL(url);
         if (headers) {
             for (var k in headers) {
+                if (k.startsWith('x-replit')) {
+                    continue;
+                }
                 if (k === 'cookie') {
-                    if (k.startsWith('x-replit')) {
-                        continue;
-                    }
                     var cookies = [];
                     var ck = headers[k].split(';');
                     for (var i=0; i<ck.length; i++) {
@@ -49,19 +50,16 @@ function fetch(method, url, headers, body, site2Proxy) {
                     newHeaders[k] = cookie;
                     continue
                 }
-                if (k === 'accept-encoding') {
-                    //todo
-                    continue;
-                }
                 if (headers[k].includes('repl.co')) {
                     headers[k] = headers[k].replaceAll(headers[k].split('https://').pop().split('/')[0], site2Proxy.split('://').pop())
                 }
                 newHeaders[k] = headers[k];
             }
         }
+        newHeaders['accept-encoding'] = 'gzip';
         newHeaders['host'] = hostname;
         var protReq = url.startsWith('https:') ? https : http;
-		var req = protReq.request(url, {method: method, body: body});
+        var req = protReq.request(url, {method: method, body: body});
         if (body && body.byteLength !== 0) {
             req.setHeader('content-length', body.byteLength);
         }
@@ -70,22 +68,26 @@ function fetch(method, url, headers, body, site2Proxy) {
                 resolve([false, res, res.headers['content-type'], res.headers, res.statusCode])
                 return;
             }
-			var body = Buffer.from('')
-			res.on('data', (chunk) => {
-				if (chunk) {
-					body = Buffer.concat([body, chunk])
-				}
-			})
-			res.on('end', function() {
-				resolve([true, body.toString(), res.headers['content-type'], res.headers, res.statusCode])
-			})
-		})
+            var body = Buffer.from('')
+            res.on('data', (chunk) => {
+                if (chunk) {
+                    body = Buffer.concat([body, chunk])
+                }
+            })
+            res.on('end', async function() {
+                if (res.headers['content-encoding'] && res.headers['content-encoding'] === 'gzip') {
+                    body = await ungzip(body);
+                }
+                body = body.toString();
+                resolve([true, body, res.headers['content-type'], res.headers, res.statusCode])
+            })
+        })
         req.on('error', function(e) {
             reject(e);
         })
         req.write(body)
         req.end()
-	})
+    })
 }
 
 function parseTextFile(body, isHtml, site2Proxy) {
@@ -215,7 +217,7 @@ var server = http.createServer(async function(req, res) {
         return;
     }
     for (var k in body[3]) {
-        if (['transfer-encoding', 'content-security-policy'].includes(k) || (k === 'content-length' && body[0] === true)) {
+        if (['transfer-encoding', 'content-security-policy', 'content-encoding'].includes(k) || (k === 'content-length' && body[0] === true)) {
             continue
         }
         if (k === 'set-cookie') {
