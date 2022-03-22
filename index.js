@@ -97,7 +97,7 @@ function fetch(method, url, headers, body, site2Proxy) {
 function parseTextFile(body, isHtml, site2Proxy) {
     body = body.replaceAll(site2Proxy+'/', '/').replaceAll(site2Proxy, '').replaceAll(site2Proxy.replaceAll('\\/', '/')+'/', '/').replaceAll(site2Proxy.replaceAll('\\/', '/'), '').replaceAll('discord', 'discordddd');
     if (isHtml) {
-        body = body.replaceAll('integrity=', 'sadfghj=').replaceAll('href="magnet:?', 'href="/torrentStream?stage=step1&magnet=');
+        body = body.replaceAll('integrity=', 'sadfghj=').replaceAll('magnet:?', '/torrentStream?stage=step1&magnet=');
         var a = body.split('src');
         for (var i=1; i<a.length; i++) {
             if (a[i].replaceAll(' ', '').replaceAll('"', '').replaceAll("'", '').startsWith('=//')) {
@@ -146,10 +146,10 @@ function torrent(req, res) {
             for (var i=0; i<files.length; i++) {
                 var downloadUrl = '/torrentStream?fileName='+encodeURIComponent(files[i].path)+'&stage=step2&magnet='+magnet;
                 var downloadUrl3 = '/torrentStream?fileName='+encodeURIComponent(files[i].path)+'&stage=step2&stream=on&magnet='+magnet;
-                html += '<li><a href="'+downloadUrl+'">'+files[i].path+'</a> - <a href="'+downloadUrl3+'">stream</a></li>';
+                html += '<li><a style="text-decoration:none" href="'+downloadUrl+'">'+files[i].path+'</a> - <a style="text-decoration:none" href="'+downloadUrl3+'">stream</a></li>';
             }
             var downloadUrl2 = '/torrentStream?stage=dlAsZip&magnet='+magnet;
-            html += '</ul><br><a href="'+downloadUrl2+'">Download All As Zip</a></ul><br></body></html>';
+            html += '</ul><br><a style="text-decoration:none" href="'+downloadUrl2+'">Download All As Zip</a></ul><br></body></html>';
             engine.destroy();
             res.setHeader('content-type', 'text/html; chartset=utf-8')
             res.writeHead(200);
