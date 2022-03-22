@@ -24,6 +24,11 @@ const sites = [ //no '/' at end
 
 */
 
+if (! String.prototype.replaceAll) {
+    String.prototype.replaceAll = function(a, b) {
+        return this.split(a).join(b);
+    }
+}
 
 function fetch(method, url, headers, body, site2Proxy) {
 	return new Promise(function(resolve, reject) {
@@ -41,11 +46,17 @@ function fetch(method, url, headers, body, site2Proxy) {
                     var {hostname} = new URL(url);
                     var cookies = [];
                     var ck = headers[k].split(';');
-                    for (var i=0; i<ck.length; i++)
+                    for (var i=0; i<ck.length; i++) {
                         if (ck[i].trim().split('_')[0].trim() === hostname) {
-                            cookies.push(ck[i].trim().split(ck[i].split('_')[0]+'_').pop());
+                            cookies.push(ck[i].trim().split(ck[i].trim().split('_')[0].trim()+'_').pop());
+                        }
                     }
-                    newHeaders[k] = cookies;
+                    var cookie = '';
+                    for (var i=0; i<cookies.length; i++) {
+                        cookie += (cookies[i] + '; ');
+                    }
+                    cookie.substring(0, cookie.length-2);
+                    newHeaders[k] = cookie;
                     continue
                 }
                 if (k === 'accept-encoding') {
@@ -59,7 +70,7 @@ function fetch(method, url, headers, body, site2Proxy) {
             }
         }
         var protReq = url.startsWith('https:') ? https : http;
-		var req = protReq.request(url, {method: method});
+		var req = protReq.request(url, {method: method, body: body});
         if (body && body.byteLength !== 0) {
             req.setHeader('content-length', body.byteLength);
         }
@@ -81,12 +92,12 @@ function fetch(method, url, headers, body, site2Proxy) {
         req.on('error', function(e) {
             reject(e);
         })
+        req.write(body)
         req.end()
 	})
 }
 
 function parseTextFile(body, isHtml, site2Proxy) {
-    //todo- only replace src urls
     body = body.replaceAll(site2Proxy+'/', '/').replaceAll(site2Proxy, '').replaceAll(site2Proxy.replaceAll('\\/', '/')+'/', '/').replaceAll(site2Proxy.replaceAll('\\/', '/'), '').replaceAll('discord', 'discordddd');
     if (isHtml) {
         var a = body.split('src');
@@ -106,7 +117,7 @@ function parseTextFile(body, isHtml, site2Proxy) {
         }
         return a.join('http');
     } else {
-        return body.replaceAll('http://', '/http://').replaceAll('https://', '/https://').replaceAll('http:\\/\\/', '/http:\\/\\/').replaceAll('https:\\/\\/', '/https:\\/\\/');
+        return body.replaceAll('http://', '/http://').replaceAll('https://', '/https://'); //.replaceAll('http:\\/\\/', '/http:\\/\\/').replaceAll('https:\\/\\/', '/https:\\/\\/');
     }
 }
 
@@ -142,7 +153,6 @@ function changeHtml(req, res) {
                 try {
                     var newURL = new URL('/', args.custom);
                     newURL = newURL.toString();
-                    console.log(newURL)
                     if (newURL.endsWith('/')) {
                         newURL = newURL.substring(0, newURL.length-1);
                     }
@@ -215,18 +225,30 @@ var server = http.createServer(async function(req, res) {
         return;
     }
     for (var k in body[3]) {
-        if (['transfer-encoding'].includes(k) || (k === 'content-length' && body[0] === true)) {
+        if (['transfer-encoding', 'content-security-policy'].includes(k) || (k === 'content-length' && body[0] === true)) {
             continue
         }
         if (k === 'set-cookie') {
             var {hostname} = new URL(url);
             if (Array.isArray(body[3][k])) {
-                var cookies = [];
+                var cookies = []; //httpOnly cookies seem to break
                 for (var i=0; i<body[3][k].length; i++) {
+                    if (body[3][k][i].includes('Domain=')) {
+                        body[3][k][i] = body[3][k][i].replaceAll('Domain='+body[3][k][i].split('Domain=').pop().split(';')[0]+';', '').replaceAll('  ', ' ');
+                    }
+                    if (body[3][k][i].includes('domain=')) {
+                        body[3][k][i] = body[3][k][i].replaceAll('domain='+body[3][k][i].split('domain=').pop().split(';')[0]+';', '').replaceAll('  ', ' ');
+                    }
                     cookies.push(hostname+'_'+body[3][k][i])
                 }
                 res.setHeader(k, cookies);
             } else {
+                if (body[3][k].includes('Domain=')) {
+                    body[3][k] = body[3][k].replaceAll('Domain='+body[3][k].split('Domain=').pop().split(';')[0]+';', '').replaceAll('  ', ' ');
+                }
+                if (body[3][k].includes('domain=')) {
+                    body[3][k] = body[3][k].replaceAll('domain='+body[3][k].split('domain=').pop().split(';')[0]+';', '').replaceAll('  ', ' ');
+                }
                 res.setHeader(k, hostname+'_'+body[3][k]);
             }
             continue;
