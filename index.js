@@ -2,6 +2,7 @@
 const https = require('https');
 const http = require('http');
 const {ungzip} = require('node-gzip');
+var torrentStream = require('torrent-stream');
 let port = 3000;
 const sites = [ //no '/' at end
     'http://mikudb.moe',
@@ -93,7 +94,7 @@ function fetch(method, url, headers, body, site2Proxy) {
 function parseTextFile(body, isHtml, site2Proxy) {
     body = body.replaceAll(site2Proxy+'/', '/').replaceAll(site2Proxy, '').replaceAll(site2Proxy.replaceAll('\\/', '/')+'/', '/').replaceAll(site2Proxy.replaceAll('\\/', '/'), '').replaceAll('discord', 'discordddd');
     if (isHtml) {
-        body = body.replaceAll('integrity=', 'sadfghj=');
+        body = body.replaceAll('integrity=', 'sadfghj=').replaceAll('href="magnet:?', 'href="/torrentStream?stage=step1&magnet=');
         var a = body.split('src');
         for (var i=1; i<a.length; i++) {
             if (a[i].replaceAll(' ', '').replaceAll('"', '').replaceAll("'", '').startsWith('=//')) {
@@ -128,6 +129,39 @@ function transformArgs(url) {
         }
     }
     return args
+}
+
+function torrent(req, res) {
+    var stage = req.url.split('stage=').pop().split('&')[0];
+    var magnet = req.url.split('magnet=').pop();
+    var engine = torrentStream('magnet:?'+magnet);
+    engine.on('ready', function() {
+        var files = engine.files;
+        if (stage === 'step1') {
+            var html = '';
+            for (var i=0; i<files.length; i++) {
+                var downloadUrl = '/torrentStream?fileName='+encodeURIComponent(files[i].name)+'&stage=step2&magnet='+magnet;
+                html += '<a href="'+downloadUrl+'">'+files[i].name+'</a>';
+            }
+            engine.destroy();
+            res.setHeader('content-type', 'text/html; chartset=utf-8')
+            res.writeHead(200);
+            res.end(html);
+        } else if (stage === 'step2') {
+            var fileName = decodeURIComponent(req.url.split('fileName=').pop().split('&')[0]);
+            var file;
+            for (var i=0; i<files.length; i++) {
+                if (files[i].name === fileName) {
+                    file = files[i];
+                    break;
+                }
+            }
+            var stream = file.createReadStream();
+            stream.pipe(res);
+        } else {
+            res.end('invalid request');
+        }
+    })
 }
 
 function removeArg(url, argName) {
@@ -175,6 +209,10 @@ function changeHtml(req, res) {
 }
 
 var server = http.createServer(async function(req, res) {
+    if (req.url.split('?')[0] === '/torrentStream') {
+        torrent(req, res);
+        return
+    }
     if (req.url.split('?')[0] === '/changeSiteToServe') {
         changeHtml(req, res);
         return;
