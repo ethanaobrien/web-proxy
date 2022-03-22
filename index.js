@@ -217,10 +217,13 @@ function removeArg(url, argName) {
 function changeHtml(req, res) {
     if (req.url.includes('?')) {
         var args = transformArgs(req.url);
-        var error = false;
         if (args.site || args.custom) {
+            var error = false;
+            var path2Redir2 = '/';
             if (args.custom) {
                 try {
+                    var a = new URL(args.custom);
+                    path2Redir2 = a.pathname+a.search;
                     var newURL = new URL('/', args.custom);
                     newURL = newURL.toString();
                     if (newURL.endsWith('/')) {
@@ -233,7 +236,7 @@ function changeHtml(req, res) {
             }
             if (!error) {
                 res.setHeader('set-cookie', 'proxySite='+(args.site ? args.site : encodeURIComponent(args.custom)));
-                res.setHeader('location', '/');
+                res.setHeader('location', path2Redir2 || '/');
                 res.writeHead(307);
                 res.end();
                 return;
