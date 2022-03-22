@@ -33,17 +33,10 @@ if (! String.prototype.replaceAll) {
 function fetch(method, url, headers, body, site2Proxy) {
 	return new Promise(function(resolve, reject) {
         var newHeaders = {};
+        var {hostname} = new URL(url);
         if (headers) {
             for (var k in headers) {
-                if (['upgrade-insecure-requests'].includes(k.toLowerCase()) || k.startsWith('x-')) {
-                    continue;//todo-securely set cookies accross multiple sites
-                }
-                if (k === 'host') {
-                    //newHeaders[k] = site2Proxy.split('://').pop();
-                    continue;
-                }
                 if (k === 'cookie') {
-                    var {hostname} = new URL(url);
                     var cookies = [];
                     var ck = headers[k].split(';');
                     for (var i=0; i<ck.length; i++) {
@@ -69,6 +62,7 @@ function fetch(method, url, headers, body, site2Proxy) {
                 newHeaders[k] = headers[k];
             }
         }
+        newHeaders['host'] = hostname;
         var protReq = url.startsWith('https:') ? https : http;
 		var req = protReq.request(url, {method: method, body: body});
         if (body && body.byteLength !== 0) {
@@ -201,7 +195,7 @@ var server = http.createServer(async function(req, res) {
     if (args.vc) {
         url = removeArg(url, 'vc');
     }
-    if (args.url) {
+    if (args.video) {
         url = removeArg(url, 'video');
     }
     var vc = args.vc;
@@ -219,7 +213,6 @@ var server = http.createServer(async function(req, res) {
     try {
         var body = await fetch(req.method, url, req.headers, reqBody, site2Proxy)
     } catch(e) {
-        console.log(e)
         res.writeHead(404);
         res.end('error');
         return;
