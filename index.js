@@ -135,10 +135,16 @@ function transformArgs(url) {
 }
 
 function torrent(req, res) {
+    res.writeContinue();
     var stage = req.url.split('stage=').pop().split('&')[0];
     var magnet = req.url.split('magnet=').pop();
     var engine = torrentStream('magnet:?'+magnet);
+    var ready = setTimeout(function() {
+        engine.destroy();
+        res.end('timeout getting torrent metedata');
+    }, 25000);
     engine.on('ready', function() {
+        clearTimeout(ready);
         var files = engine.files;
         var torrentName = engine.torrent.name;
         if (stage === 'step1') {
