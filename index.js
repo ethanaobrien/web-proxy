@@ -142,26 +142,32 @@ function torrent(req, res) {
         var files = engine.files;
         var torrentName = engine.torrent.name;
         if (stage === 'step1') {
-            var html = '<br><ul><h1>Download</h1><br><ul>';
+            var html = '<html><head></head><body><br><ul><h1>Download</h1><br><ul>';
             for (var i=0; i<files.length; i++) {
-                var downloadUrl = '/torrentStream?fileName='+encodeURIComponent(files[i].name)+'&stage=step2&magnet='+magnet;
-                var downloadUrl3 = '/torrentStream?fileName='+encodeURIComponent(files[i].name)+'&stage=step2&stream=on&magnet='+magnet;
-                html += '<li><a href="'+downloadUrl+'">'+files[i].name+'</a> - <a href="'+downloadUrl3+'">stream</a></li>';
+                var downloadUrl = '/torrentStream?fileName='+encodeURIComponent(files[i].path)+'&stage=step2&magnet='+magnet;
+                var downloadUrl3 = '/torrentStream?fileName='+encodeURIComponent(files[i].path)+'&stage=step2&stream=on&magnet='+magnet;
+                html += '<li><a href="'+downloadUrl+'">'+files[i].path+'</a> - <a href="'+downloadUrl3+'">stream</a></li>';
             }
             var downloadUrl2 = '/torrentStream?stage=dlAsZip&magnet='+magnet;
-            html += '</ul><br><a href="'+downloadUrl2+'">Download All As Zip</a></ul>';
+            html += '</ul><br><a href="'+downloadUrl2+'">Download All As Zip</a></ul><br></body></html>';
             engine.destroy();
             res.setHeader('content-type', 'text/html; chartset=utf-8')
             res.writeHead(200);
-            res.end(html);
+            res.end(Buffer.concat([Buffer.from(new Uint8Array([0xEF,0xBB,0xBF])), Buffer.from(html)]));
         } else if (stage === 'step2') {
             var fileName = decodeURIComponent(req.url.split('fileName=').pop().split('&')[0]);
             var file;
             for (var i=0; i<files.length; i++) {
-                if (files[i].name === fileName) {
+                if (files[i].path === fileName) {
                     file = files[i];
                     break;
                 }
+            }
+            if (! file) {
+                res.writeHead(500);
+                res.end('error finding file');
+                engine.destroy();
+                return;
             }
             res.setHeader('content-length', file.length);
             if (req.url.includes('stream=') && req.url.split('stream=').pop().split('&')[0] === 'on' && MIMETYPES[file.name.split('.').pop()]) {
@@ -178,7 +184,7 @@ function torrent(req, res) {
         } else if (stage === 'dlAsZip') {
             var zip = new JSZip();
             for (var i=0; i<files.length; i++) {
-                zip.file(files[i].name, files[i].createReadStream())
+                zip.file(files[i].path, files[i].createReadStream())
             }
             res.setHeader('Content-Disposition', 'attachment; filename="'+encodeURIComponent(torrentName+'.zip')+'"');
             res.writeHead(200);
