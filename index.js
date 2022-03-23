@@ -36,7 +36,7 @@ function fetch(method, url, headers, body, site2Proxy) {
         var {hostname} = new URL(url);
         if (headers) {
             for (var k in headers) {
-                if (k.startsWith('x-replit')) {
+                if (k.startsWith('x-replit') || k === 'user-agent') {
                     continue;
                 }
                 if (k === 'cookie') {
@@ -327,7 +327,7 @@ var server = http.createServer(async function(req, res) {
         reqBody = Buffer.from(parseTextFile(reqBody.toString(), false, true, site2Proxy, url));
     }
     try {
-        var body = await fetch(req.method, url, req.headers, reqBody, site2Proxy)
+        var body = await fetch(req.method, url, req.headers, reqBody, site2Proxy);
     } catch(e) {
         res.writeHead(404);
         res.end('error');
