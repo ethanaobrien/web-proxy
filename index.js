@@ -5,6 +5,7 @@ const {ungzip} = require('node-gzip');
 const torrentStream = require('torrent-stream');
 const JSZip = require("jszip");
 const {MIMETYPES} = require("./mime.js");
+const siteUrl = 'https://canvas-cluster-007.ethanobrien7.repl.co';
 
 let port = 3000;
 const sites = [ //no '/' at end
@@ -63,12 +64,19 @@ function fetch(method, url, headers, body, site2Proxy) {
         newHeaders['accept-encoding'] = 'gzip';
         newHeaders['host'] = hostname;
         var protReq = url.startsWith('https:') ? https : http;
-        var req = protReq.request(url, {method: method, body: body});
+        var req = protReq.request(url, {method: method});
+        for (var k in newHeaders) {
+            req.setHeader(k, newHeaders[k]);
+        }
         if (body && body.byteLength !== 0) {
             req.setHeader('content-length', body.byteLength);
         }
         req.on('response', function(res) {
-            if (!res.headers['content-type'] || !(res.headers['content-type'] && res.headers['content-type'].includes('javascript') || res.headers['content-type'].includes('html'))) {
+            if (!res.headers['content-type'] ||
+                !(res.headers['content-type'] &&
+                 (res.headers['content-type'].includes('javascript') ||
+                  res.headers['content-type'].includes('html') ||
+                  res.headers['content-type'].includes('x-www-form-urlencoded')))) {
                 resolve([false, res, res.headers['content-type'], res.headers, res.statusCode])
                 return;
             }
@@ -89,12 +97,14 @@ function fetch(method, url, headers, body, site2Proxy) {
         req.on('error', function(e) {
             reject(e);
         })
-        req.write(body)
+        if (body) {
+            req.write(body)
+        }
         req.end()
     })
 }
 
-function parseTextFile(body, isHtml, site2Proxy) {
+function parseTextFile(body, isHtml, isUrlEncoded, site2Proxy, url) {
     body = body.replaceAll(site2Proxy+'/', '/').replaceAll(site2Proxy, '').replaceAll(site2Proxy.replaceAll('\\/', '/')+'/', '/').replaceAll(site2Proxy.replaceAll('\\/', '/'), '').replaceAll('discord', 'discordddd');
     if (isHtml) {
         body = body.replaceAll('integrity=', 'sadfghj=').replaceAll('magnet:?', '/torrentStream?stage=step1&magnet=');
@@ -114,6 +124,20 @@ function parseTextFile(body, isHtml, site2Proxy) {
             }
         }
         return a.join('http');
+    } else if (isUrlEncoded) {
+        var {hostname} = new URL(url);
+        var h = hostname;
+        var {hostname} = new URL(site2Proxy);
+        var a = body.split('&')
+        for (var i=0; i<a.length; i++) {
+            var b = a[i].split('=');
+            for (var j=0; j<b.length; j++) {
+                b[j] = encodeURIComponent(decodeURIComponent(b[j]).replaceAll(hostname, h).replaceAll(siteUrl, site2Proxy));
+            }
+            a[i] = b.join('=');
+        }
+        body = a.join('&');
+        return body;
     } else {
         return body.replaceAll('http://', '/http://').replaceAll('https://', '/https://'); //.replaceAll('http:\\/\\/', '/http:\\/\\/').replaceAll('https:\\/\\/', '/https:\\/\\/');
     }
@@ -207,7 +231,7 @@ function torrent(req, res) {
 }
 
 function removeArg(url, argName) {
-    if (! url.includes(argName)) {
+    if (! url.split('?').pop().includes(argName)) {
         return url;
     }
     var a = url.split(argName).pop().split('&')[0];
@@ -274,6 +298,12 @@ var server = http.createServer(async function(req, res) {
         return;
     }
     var url = req.url.startsWith('/http') ? req.url.substring(1) : site2Proxy+req.url;
+    if (req.url.startsWith('/https') && req.url.startsWith('/https:/') && !req.url.startsWith('/https://')) {
+        url = req.url.substring(1).replace('https:/', 'https://')
+    }
+    if (req.url.startsWith('/http') && req.url.startsWith('/http:/') && !req.url.startsWith('/http://')) {
+        url = req.url.substring(1).replace('http:/', 'http://')
+    }
     var args = transformArgs(req.url);
     if (args.vc) {
         url = removeArg(url, 'vc');
@@ -293,12 +323,20 @@ var server = http.createServer(async function(req, res) {
             resolve(body);
         })
     })
+    if (req.headers['content-type'] && req.headers['content-type'].includes('x-www-form-urlencoded')) {
+        reqBody = Buffer.from(parseTextFile(reqBody.toString(), false, true, site2Proxy, url));
+    }
     try {
         var body = await fetch(req.method, url, req.headers, reqBody, site2Proxy)
     } catch(e) {
         res.writeHead(404);
         res.end('error');
         return;
+    }
+    if (!body[4].toString().startsWith('2') && ! body[4].toString().startsWith('3') && false) {
+        console.log('\n')
+        console.log(url)
+        console.log(body[4], body[2], req.method, req.headers['content-type'])
     }
     for (var k in body[3]) {
         if (['transfer-encoding', 'content-security-policy', 'content-encoding'].includes(k) || (k === 'content-length' && body[0] === true)) {
@@ -341,7 +379,7 @@ var server = http.createServer(async function(req, res) {
     if (body[0] === true) {
         var code = body[4];
         //javascript/html parsing
-        body = parseTextFile(body[1], body[2].includes('html'), site2Proxy);
+        body = parseTextFile(body[1], body[2].includes('html'), body[2].includes('x-www-form-urlencoded'), site2Proxy, url);
         if (args.video && ['1', 'true'].includes(args.video) && body.includes('View High Qual')) {
             var videoUrl = ('/'+body.split('">View High Qual')[0].split('href="').pop());
             res.setHeader('location', videoUrl);
