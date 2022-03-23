@@ -5,7 +5,6 @@ const {ungzip} = require('node-gzip');
 const torrentStream = require('torrent-stream');
 const JSZip = require("jszip");
 const {MIMETYPES} = require("./mime.js");
-const siteUrl = 'https://canvas-cluster-007.ethanobrien7.repl.co';
 
 let port = 3000;
 const sites = [ //no '/' at end
@@ -43,7 +42,7 @@ function fetch(method, url, headers, body, site2Proxy) {
                     var cookies = [];
                     var ck = headers[k].split(';');
                     for (var i=0; i<ck.length; i++) {
-                        if (ck[i].trim().split('_')[0].trim() === hostname) {
+                        if (ck[i].trim().split('_')[0].trim() === hostname || (site2Proxy === 'https://instagram.com' && url.includes('instagram.com'))) {
                             cookies.push(ck[i].trim().split(ck[i].trim().split('_')[0].trim()+'_').pop());
                         }
                     }
@@ -76,6 +75,8 @@ function fetch(method, url, headers, body, site2Proxy) {
                 !(res.headers['content-type'] &&
                  (res.headers['content-type'].includes('javascript') ||
                   res.headers['content-type'].includes('html') ||
+                  res.headers['content-type'].includes('json') ||
+                  //res.headers['content-type'].includes('css') ||
                   res.headers['content-type'].includes('x-www-form-urlencoded')))) {
                 resolve([false, res, res.headers['content-type'], res.headers, res.statusCode])
                 return;
@@ -105,7 +106,7 @@ function fetch(method, url, headers, body, site2Proxy) {
 }
 
 function parseTextFile(body, isHtml, isUrlEncoded, site2Proxy, url) {
-    body = body.replaceAll(site2Proxy+'/', '/').replaceAll(site2Proxy, '').replaceAll(site2Proxy.replaceAll('\\/', '/')+'/', '/').replaceAll(site2Proxy.replaceAll('\\/', '/'), '').replaceAll('discord', 'discordddd');
+    body = body.replaceAll(site2Proxy+'/', '/').replaceAll(site2Proxy, '').replaceAll(site2Proxy.replaceAll('\\/', '/')+'/', '/').replaceAll(site2Proxy.replaceAll('\\/', '/'), '').replaceAll('discord', 'discordddd');//.replaceAll('https:\\/\\/', '/https:\\/\\/').replaceAll('http:\\/\\/', '/http:\\/\\/');
     if (isHtml) {
         body = body.replaceAll('integrity=', 'sadfghj=').replaceAll('magnet:?', '/torrentStream?stage=step1&magnet=');
         var a = body.split('src');
@@ -132,7 +133,7 @@ function parseTextFile(body, isHtml, isUrlEncoded, site2Proxy, url) {
         for (var i=0; i<a.length; i++) {
             var b = a[i].split('=');
             for (var j=0; j<b.length; j++) {
-                b[j] = encodeURIComponent(decodeURIComponent(b[j]).replaceAll(hostname, h).replaceAll(siteUrl, site2Proxy));
+                b[j] = encodeURIComponent(decodeURIComponent(b[j]).replaceAll(hostname, h));
             }
             a[i] = b.join('=');
         }
