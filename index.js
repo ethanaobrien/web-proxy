@@ -75,9 +75,8 @@ function fetch(method, url, headers, body, site2Proxy) {
                 !(res.headers['content-type'] &&
                  (res.headers['content-type'].includes('javascript') ||
                   res.headers['content-type'].includes('html') ||
-                  res.headers['content-type'].includes('x-www-form-urlencoded'))) ||
-               !(res.headers['content-encoding'] && res.headers['content-encoding'] === 'gzip')) {
-                resolve([false, res, res.headers['content-type'], res.headers, res.statusCode, true])
+                  res.headers['content-type'].includes('x-www-form-urlencoded')))) {
+                resolve([false, res, res.headers['content-type'], res.headers, res.statusCode])
                 return;
             }
             var body = Buffer.from('')
@@ -91,11 +90,7 @@ function fetch(method, url, headers, body, site2Proxy) {
                     body = await ungzip(body);
                 }
                 body = body.toString();
-                resolve([true, body, res.headers['content-type'], res.headers, res.statusCode, (!res.headers['content-type'] ||
-                !(res.headers['content-type'] &&
-                 (res.headers['content-type'].includes('javascript') ||
-                  res.headers['content-type'].includes('html') ||
-                  res.headers['content-type'].includes('x-www-form-urlencoded'))))])
+                resolve([true, body, res.headers['content-type'], res.headers, res.statusCode])
             })
         })
         req.on('error', function(e) {
@@ -109,7 +104,7 @@ function fetch(method, url, headers, body, site2Proxy) {
 }
 
 function parseTextFile(body, isHtml, isUrlEncoded, site2Proxy, url) {
-    body = body.replaceAll(site2Proxy+'/', '/').replaceAll(site2Proxy, '').replaceAll(site2Proxy.replaceAll('\\/', '/')+'/', '/').replaceAll(site2Proxy.replaceAll('\\/', '/'), '').replaceAll('discord', 'discordddd').replaceAll('https:\\/\\/', '/https:\\/\\/').replaceAll('http:\\/\\/', '/http:\\/\\/');
+    body = body.replaceAll(site2Proxy+'/', '/').replaceAll(site2Proxy, '').replaceAll(site2Proxy.replaceAll('\\/', '/')+'/', '/').replaceAll(site2Proxy.replaceAll('\\/', '/'), '').replaceAll('discord', 'discordddd');//.replaceAll('https:\\/\\/', '/https:\\/\\/').replaceAll('http:\\/\\/', '/http:\\/\\/');
     if (isHtml) {
         body = body.replaceAll('integrity=', 'sadfghj=').replaceAll('magnet:?', '/torrentStream?stage=step1&magnet=');
         var a = body.split('src');
@@ -343,7 +338,7 @@ var server = http.createServer(async function(req, res) {
         console.log(body[4], body[2], req.method, req.headers['content-type'])
     }
     for (var k in body[3]) {
-        if (['transfer-encoding', 'content-security-policy'].includes(k) || ((['content-length'].includes(k)) && body[0] === true)) {
+        if (['transfer-encoding', 'content-security-policy', 'content-encoding'].includes(k) || (k === 'content-length' && body[0] === true)) {
             continue
         }
         if (k === 'set-cookie') {
@@ -380,7 +375,7 @@ var server = http.createServer(async function(req, res) {
     if (vc == 'true' || vc == '1') {
         res.setHeader('content-type', 'text/plain')
     }
-    if (body[0] === true && body[5] === false) {
+    if (body[0] === true) {
         var code = body[4];
         //javascript/html parsing
         body = parseTextFile(body[1], body[2].includes('html'), body[2].includes('x-www-form-urlencoded'), site2Proxy, url);
