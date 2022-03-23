@@ -35,14 +35,14 @@ function fetch(method, url, headers, body, site2Proxy) {
         var {hostname} = new URL(url);
         if (headers) {
             for (var k in headers) {
-                if (k.startsWith('x-replit') || k === 'user-agent') {
+                if (k.startsWith('x-replit') || k === 'user-agent' || k === 'accept-encoding') {
                     continue;
                 }
                 if (k === 'cookie') {
                     var cookies = [];
                     var ck = headers[k].split(';');
                     for (var i=0; i<ck.length; i++) {
-                        if (ck[i].trim().split('_')[0].trim() === hostname || (site2Proxy === 'https://instagram.com' && url.includes('instagram.com'))) {
+                        if (ck[i].trim().split('_')[0].trim() === hostname || (site2Proxy === 'https://www.instagram.com' && url.includes('instagram.com'))) {
                             cookies.push(ck[i].trim().split(ck[i].trim().split('_')[0].trim()+'_').pop());
                         }
                     }
@@ -60,7 +60,6 @@ function fetch(method, url, headers, body, site2Proxy) {
                 newHeaders[k] = headers[k];
             }
         }
-        newHeaders['accept-encoding'] = 'gzip';
         newHeaders['host'] = hostname;
         var protReq = url.startsWith('https:') ? https : http;
         var req = protReq.request(url, {method: method});
@@ -75,6 +74,7 @@ function fetch(method, url, headers, body, site2Proxy) {
                 !(res.headers['content-type'] &&
                  (res.headers['content-type'].includes('javascript') ||
                   res.headers['content-type'].includes('html') ||
+                  res.headers['content-type'].includes('json') ||
                   res.headers['content-type'].includes('x-www-form-urlencoded')))) {
                 resolve([false, res, res.headers['content-type'], res.headers, res.statusCode])
                 return;
@@ -96,15 +96,14 @@ function fetch(method, url, headers, body, site2Proxy) {
         req.on('error', function(e) {
             reject(e);
         })
-        if (body) {
-            req.write(body)
-        }
+        req.write(body)
         req.end()
     })
 }
 
-function parseTextFile(body, isHtml, isUrlEncoded, site2Proxy, url) {
-    body = body.replaceAll(site2Proxy+'/', '/').replaceAll(site2Proxy, '').replaceAll(site2Proxy.replaceAll('\\/', '/')+'/', '/').replaceAll(site2Proxy.replaceAll('\\/', '/'), '').replaceAll('discord', 'discordddd');//.replaceAll('https:\\/\\/', '/https:\\/\\/').replaceAll('http:\\/\\/', '/http:\\/\\/');
+function parseTextFile(body, isHtml, isUrlEncoded, site2Proxy, url, reqHost) {
+    var {hostname} = new URL(site2Proxy);
+    body = body.replaceAll(site2Proxy+'/', '/').replaceAll(site2Proxy, '').replaceAll(site2Proxy.replaceAll('\\/', '/')+'/', '/').replaceAll(site2Proxy.replaceAll('\\/', '/'), '').replaceAll(hostname, reqHost).replaceAll('discord', 'discordddd');
     if (isHtml) {
         body = body.replaceAll('integrity=', 'sadfghj=').replaceAll('magnet:?', '/torrentStream?stage=step1&magnet=');
         var a = body.split('src');
@@ -277,6 +276,7 @@ function changeHtml(req, res) {
 }
 
 var server = http.createServer(async function(req, res) {
+    var host = req.headers.host;
     if (req.url.split('?')[0] === '/torrentStream') {
         torrent(req, res);
         return
@@ -323,7 +323,7 @@ var server = http.createServer(async function(req, res) {
         })
     })
     if (req.headers['content-type'] && req.headers['content-type'].includes('x-www-form-urlencoded')) {
-        reqBody = Buffer.from(parseTextFile(reqBody.toString(), false, true, site2Proxy, url));
+        reqBody = Buffer.from(parseTextFile(reqBody.toString(), false, true, site2Proxy, url, host));
     }
     try {
         var body = await fetch(req.method, url, req.headers, reqBody, site2Proxy);
@@ -338,7 +338,10 @@ var server = http.createServer(async function(req, res) {
         console.log(body[4], body[2], req.method, req.headers['content-type'])
     }
     for (var k in body[3]) {
-        if (['transfer-encoding', 'content-security-policy', 'content-encoding'].includes(k) || (k === 'content-length' && body[0] === true)) {
+        if (['content-security-policy'].includes(k) || (k === 'content-length' && body[0] === true)) {
+            continue
+        }
+        if (k === 'content-encoding') {
             continue
         }
         if (k === 'set-cookie') {
@@ -378,7 +381,7 @@ var server = http.createServer(async function(req, res) {
     if (body[0] === true) {
         var code = body[4];
         //javascript/html parsing
-        body = parseTextFile(body[1], body[2].includes('html'), body[2].includes('x-www-form-urlencoded'), site2Proxy, url);
+        body = parseTextFile(body[1], body[2].includes('html'), body[2].includes('x-www-form-urlencoded'), site2Proxy, url, host);
         if (args.video && ['1', 'true'].includes(args.video) && body.includes('View High Qual')) {
             var videoUrl = ('/'+body.split('">View High Qual')[0].split('href="').pop());
             res.setHeader('location', videoUrl);
