@@ -42,7 +42,7 @@ function fetch(method, url, headers, body, site2Proxy) {
                     var cookies = [];
                     var ck = headers[k].split(';');
                     for (var i=0; i<ck.length; i++) {
-                        if (ck[i].trim().split('_')[0].trim() === hostname || (site2Proxy === 'https://www.instagram.com' && url.includes('instagram.com'))) {
+                        if (ck[i].trim().split('_')[0].trim() === hostname || (site2Proxy === 'https://www.instagram.com' && url.includes('instagram.com') && ck[i].trim().split('_')[0].trim().includes('www.instagram.com')) && !ck[i].includes('proxySite')) {
                             cookies.push(ck[i].trim().split(ck[i].trim().split('_')[0].trim()+'_').pop());
                         }
                     }
@@ -199,16 +199,48 @@ function torrent(req, res) {
             }
             res.setHeader('content-length', file.length);
             if (req.url.includes('stream=') && req.url.split('stream=').pop().split('&')[0] === 'on' && MIMETYPES[file.name.split('.').pop()]) {
+                res.setHeader('accept-ranges','bytes');
                 res.setHeader('content-type', MIMETYPES[file.name.split('.').pop()]);
+                if (req.headers['range']) {
+                    if (! rparts[1]) {
+                        var fileOffset = parseInt(rparts[0]);
+                        var fileEndOffset = file.length - 1;
+                        res.setHeader('content-length', file.length-fileOffset);
+                        res.setHeader('content-range','bytes '+fileOffset+'-'+(file.length-1)+'/'+file.length);
+                        if (fileOffset == 0) {
+                            res.writeHead(200);
+                        } else {
+                            res.writeHead(206);
+                        }
+                        var stream = file.createReadStream({start: fileOffset,end: file.length-1});
+                        stream.pipe(res);
+                        stream.on('finish', function() {
+                            engine.destroy();
+                        })
+                    } else {
+                        var fileOffset = parseInt(rparts[0]);
+                        var fileEndOffset = parseInt(rparts[1])
+                        res.setHeader('content-length', fileEndOffset - fileOffset + 1);
+                        res.setHeader('content-range','bytes '+fileOffset+'-'+(fileEndOffset)+'/'+file.length)
+                        res.writeHead(206);
+                        var stream = file.createReadStream({start: fileOffset,end: fileEndOffset});
+                        stream.pipe(res);
+                        stream.on('finish', function() {
+                            engine.destroy();
+                        })
+                    }
+                } else {
+                    res.writeHead(200);
+                }
             } else {
                 res.setHeader('Content-Disposition', 'attachment; filename="'+encodeURIComponent(fileName)+'"');
+                res.writeHead(200);
+                var stream = file.createReadStream();
+                stream.pipe(res);
+                stream.on('finish', function() {
+                    engine.destroy();
+                })
             }
-            res.writeHead(200);
-            var stream = file.createReadStream();
-            stream.pipe(res);
-            stream.on('finish', function() {
-                engine.destroy();
-            })
         } else if (stage === 'dlAsZip') {
             var zip = new JSZip();
             for (var i=0; i<files.length; i++) {
