@@ -203,6 +203,8 @@ function torrent(req, res) {
                 res.setHeader('accept-ranges','bytes');
                 res.setHeader('content-type', MIMETYPES[file.name.split('.').pop()]);
                 if (req.headers['range']) {
+                    var range = req.headers['range'].split('=')[1].trim();
+                    var rparts = range.split('-');
                     if (! rparts[1]) {
                         fileOffset = parseInt(rparts[0]);
                         var fileEndOffset = file.length - 1;
