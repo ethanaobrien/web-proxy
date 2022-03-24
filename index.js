@@ -198,12 +198,13 @@ function torrent(req, res) {
                 return;
             }
             res.setHeader('content-length', file.length);
-            if (req.url.includes('stream=') && req.url.split('stream=').pop().split('&')[0] === 'on' && MIMETYPES[file.name.split('.').pop()]) {
+            res.setHeader('accept-ranges','bytes');
+            if ((req.url.includes('stream=') && req.url.split('stream=').pop().split('&')[0] === 'on' && MIMETYPES[file.name.split('.').pop()]) || req.headers['range']) {
                 var fileOffset, fileEndOffset;
                 res.setHeader('Content-Disposition', 'inline; filename="'+encodeURIComponent(fileName)+'"');
-                res.setHeader('accept-ranges','bytes');
                 res.setHeader('content-type', MIMETYPES[file.name.split('.').pop()]);
                 if (req.headers['range']) {
+                    console.log('range request')
                     var range = req.headers['range'].split('=')[1].trim();
                     var rparts = range.split('-');
                     if (! rparts[1]) {
