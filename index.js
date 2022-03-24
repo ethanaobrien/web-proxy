@@ -199,11 +199,12 @@ function torrent(req, res) {
             }
             res.setHeader('content-length', file.length);
             if (req.url.includes('stream=') && req.url.split('stream=').pop().split('&')[0] === 'on' && MIMETYPES[file.name.split('.').pop()]) {
+                var fileOffset, fileEndOffset;
                 res.setHeader('accept-ranges','bytes');
                 res.setHeader('content-type', MIMETYPES[file.name.split('.').pop()]);
                 if (req.headers['range']) {
                     if (! rparts[1]) {
-                        var fileOffset = parseInt(rparts[0]);
+                        fileOffset = parseInt(rparts[0]);
                         var fileEndOffset = file.length - 1;
                         res.setHeader('content-length', file.length-fileOffset);
                         res.setHeader('content-range','bytes '+fileOffset+'-'+(file.length-1)+'/'+file.length);
@@ -218,8 +219,8 @@ function torrent(req, res) {
                             engine.destroy();
                         })
                     } else {
-                        var fileOffset = parseInt(rparts[0]);
-                        var fileEndOffset = parseInt(rparts[1])
+                        fileOffset = parseInt(rparts[0]);
+                        fileEndOffset = parseInt(rparts[1])
                         res.setHeader('content-length', fileEndOffset - fileOffset + 1);
                         res.setHeader('content-range','bytes '+fileOffset+'-'+(fileEndOffset)+'/'+file.length)
                         res.writeHead(206);
@@ -230,7 +231,14 @@ function torrent(req, res) {
                         })
                     }
                 } else {
+                    fileOffset = 0;
+                    fileEndOffset = file.length - 1;
                     res.writeHead(200);
+                    var stream = file.createReadStream({start: fileOffset,end: fileEndOffset});
+                    stream.pipe(res);
+                    stream.on('finish', function() {
+                        engine.destroy();
+                    })
                 }
             } else {
                 res.setHeader('Content-Disposition', 'attachment; filename="'+encodeURIComponent(fileName)+'"');
