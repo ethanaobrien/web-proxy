@@ -200,6 +200,7 @@ function torrent(req, res) {
             res.setHeader('content-length', file.length);
             if (req.url.includes('stream=') && req.url.split('stream=').pop().split('&')[0] === 'on' && MIMETYPES[file.name.split('.').pop()]) {
                 var fileOffset, fileEndOffset;
+                res.setHeader('Content-Disposition', 'inline; filename="'+encodeURIComponent(fileName)+'"');
                 res.setHeader('accept-ranges','bytes');
                 res.setHeader('content-type', MIMETYPES[file.name.split('.').pop()]);
                 if (req.headers['range']) {
