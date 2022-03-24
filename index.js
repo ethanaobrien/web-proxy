@@ -35,7 +35,7 @@ function fetch(method, url, headers, body, site2Proxy) {
         var {hostname} = new URL(url);
         if (headers) {
             for (var k in headers) {
-                if (k.startsWith('x-replit') || k === 'user-agent' || k === 'accept-encoding') {
+                if (k.startsWith('x-replit') || k === 'accept-encoding') {
                     continue;
                 }
                 if (k === 'cookie') {
