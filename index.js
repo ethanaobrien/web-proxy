@@ -5,6 +5,7 @@ const {ungzip} = require('node-gzip');
 const torrentStream = require('torrent-stream');
 const JSZip = require("jszip");
 const {MIMETYPES} = require("./mime.js");
+const isInstagramProxy = false;
 
 let port = 3000;
 const sites = [ //no '/' at end
@@ -42,7 +43,11 @@ function fetch(method, url, headers, body, site2Proxy) {
                     var cookies = [];
                     var ck = headers[k].split(';');
                     for (var i=0; i<ck.length; i++) {
-                        if (ck[i].trim().split('_')[0].trim() === hostname || (site2Proxy === 'https://www.instagram.com' && url.includes('instagram.com') && ck[i].trim().split('_')[0].trim().includes('www.instagram.com')) && !ck[i].includes('proxySite')) {
+                        if (isInstagramProxy) {
+                            if (!ck[i].includes('proxySite')) {
+                                cookies.push(ck[i].trim());
+                            }
+                        } else if (ck[i].trim().split('_')[0].trim() === hostname && !ck[i].includes('proxySite')) {
                             cookies.push(ck[i].trim().split(ck[i].trim().split('_')[0].trim()+'_').pop());
                         }
                     }
@@ -61,6 +66,8 @@ function fetch(method, url, headers, body, site2Proxy) {
             }
         }
         newHeaders['host'] = hostname;
+        //console.log(url)
+        //console.log(newHeaders)
         var protReq = url.startsWith('https:') ? https : http;
         var req = protReq.request(url, {method: method});
         for (var k in newHeaders) {
@@ -329,6 +336,13 @@ var server = http.createServer(async function(req, res) {
     if (req.headers.cookie && req.headers.cookie.includes('proxySite=')) {
         site2Proxy = decodeURIComponent(req.headers.cookie.split('proxySite=').pop().split(';')[0]);
     }
+    if (site2Proxy === 'https://www.instagram.com' && !isInstagramProxy) {
+        res.writeHead(500);
+        res.end('isInstagramProxy value is not true. Must be set to true to use instagram');
+        return;
+    } else if (isInstagramProxy) {
+        site2Proxy = 'https://www.instagram.com';
+    }
     //console.log(site2Proxy);
     if (! site2Proxy) {
         res.setHeader('location', '/changeSiteToServe');
@@ -395,7 +409,11 @@ var server = http.createServer(async function(req, res) {
                     if (body[3][k][i].includes('domain=')) {
                         body[3][k][i] = body[3][k][i].replaceAll('domain='+body[3][k][i].split('domain=').pop().split(';')[0]+';', '').replaceAll('  ', ' ');
                     }
-                    cookies.push(hostname+'_'+body[3][k][i])
+                    if (isInstagramProxy) {
+                        cookies.push(body[3][k][i])
+                    } else {
+                        cookies.push(hostname+'_'+body[3][k][i])
+                    }
                 }
                 res.setHeader(k, cookies);
             } else {
