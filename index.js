@@ -5,7 +5,7 @@ const {ungzip} = require('node-gzip');
 const torrentStream = require('torrent-stream');
 const JSZip = require("jszip");
 const {MIMETYPES} = require("./mime.js");
-const isInstagramProxy = true;
+const isInstagramProxy = false;
 
 let port = 3000;
 const sites = [ //no '/' at end
