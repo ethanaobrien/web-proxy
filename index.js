@@ -144,7 +144,7 @@ function parseTextFile(body, isHtml, isUrlEncoded, site2Proxy, url, reqHost) {
             a[i] = b.join('=');
         }
         body = a.join('&');
-        return body;
+        return body.replaceAll('%2B', ' ');
     } else {
         return body.replaceAll('http://', '/http://').replaceAll('https://', '/https://'); //.replaceAll('http:\\/\\/', '/http:\\/\\/').replaceAll('https:\\/\\/', '/https:\\/\\/');
     }
