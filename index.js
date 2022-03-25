@@ -199,45 +199,40 @@ function torrent(req, res) {
             }
             res.setHeader('content-length', file.length);
             res.setHeader('accept-ranges','bytes');
-            if ((req.url.includes('stream=') && req.url.split('stream=').pop().split('&')[0] === 'on' && MIMETYPES[file.name.split('.').pop()]) || req.headers['range']) {
-                var fileOffset, fileEndOffset;
-                res.setHeader('Content-Disposition', 'inline; filename="'+encodeURIComponent(fileName)+'"');
+            if (MIMETYPES[file.name.split('.').pop()])) {
                 res.setHeader('content-type', MIMETYPES[file.name.split('.').pop()]);
-                if (req.headers['range']) {
-                    console.log('range request')
-                    var range = req.headers['range'].split('=')[1].trim();
-                    var rparts = range.split('-');
-                    if (! rparts[1]) {
-                        fileOffset = parseInt(rparts[0]);
-                        var fileEndOffset = file.length - 1;
-                        res.setHeader('content-length', file.length-fileOffset);
-                        res.setHeader('content-range','bytes '+fileOffset+'-'+(file.length-1)+'/'+file.length);
-                        if (fileOffset == 0) {
-                            res.writeHead(200);
-                        } else {
-                            res.writeHead(206);
-                        }
-                        var stream = file.createReadStream({start: fileOffset,end: file.length-1});
-                        stream.pipe(res);
-                        stream.on('finish', function() {
-                            engine.destroy();
-                        })
+            }
+            var fileOffset, fileEndOffset;
+            if ((req.url.includes('stream=') && req.url.split('stream=').pop().split('&')[0] === 'on') || req.headers['range']) {
+                res.setHeader('Content-Disposition', 'inline; filename="'+encodeURIComponent(fileName)+'"');
+            } else {
+                res.setHeader('Content-Disposition', 'attachment; filename="'+encodeURIComponent(fileName)+'"');
+            }
+            if (req.headers['range']) {
+                console.log('range request')
+                var range = req.headers['range'].split('=')[1].trim();
+                var rparts = range.split('-');
+                if (! rparts[1]) {
+                    fileOffset = parseInt(rparts[0]);
+                    var fileEndOffset = file.length - 1;
+                    res.setHeader('content-length', file.length-fileOffset);
+                    res.setHeader('content-range','bytes '+fileOffset+'-'+(file.length-1)+'/'+file.length);
+                    if (fileOffset == 0) {
+                        res.writeHead(200);
                     } else {
-                        fileOffset = parseInt(rparts[0]);
-                        fileEndOffset = parseInt(rparts[1])
-                        res.setHeader('content-length', fileEndOffset - fileOffset + 1);
-                        res.setHeader('content-range','bytes '+fileOffset+'-'+(fileEndOffset)+'/'+file.length)
                         res.writeHead(206);
-                        var stream = file.createReadStream({start: fileOffset,end: fileEndOffset});
-                        stream.pipe(res);
-                        stream.on('finish', function() {
-                            engine.destroy();
-                        })
                     }
+                    var stream = file.createReadStream({start: fileOffset,end: file.length-1});
+                    stream.pipe(res);
+                    stream.on('finish', function() {
+                        engine.destroy();
+                    })
                 } else {
-                    fileOffset = 0;
-                    fileEndOffset = file.length - 1;
-                    res.writeHead(200);
+                    fileOffset = parseInt(rparts[0]);
+                    fileEndOffset = parseInt(rparts[1])
+                    res.setHeader('content-length', fileEndOffset - fileOffset + 1);
+                    res.setHeader('content-range','bytes '+fileOffset+'-'+(fileEndOffset)+'/'+file.length)
+                    res.writeHead(206);
                     var stream = file.createReadStream({start: fileOffset,end: fileEndOffset});
                     stream.pipe(res);
                     stream.on('finish', function() {
@@ -245,9 +240,10 @@ function torrent(req, res) {
                     })
                 }
             } else {
-                res.setHeader('Content-Disposition', 'attachment; filename="'+encodeURIComponent(fileName)+'"');
+                fileOffset = 0;
+                fileEndOffset = file.length - 1;
                 res.writeHead(200);
-                var stream = file.createReadStream();
+                var stream = file.createReadStream({start: fileOffset,end: fileEndOffset});
                 stream.pipe(res);
                 stream.on('finish', function() {
                     engine.destroy();
