@@ -134,6 +134,7 @@ function parseTextFile(body, isHtml, isUrlEncoded, site2Proxy, url, reqHost) {
     } else if (isUrlEncoded) {
         var {hostname} = new URL(url);
         var h = hostname;
+        var hasSpecialSpace = body.includes('%2B');
         var {hostname} = new URL(site2Proxy);
         var a = body.split('&')
         for (var i=0; i<a.length; i++) {
@@ -144,7 +145,10 @@ function parseTextFile(body, isHtml, isUrlEncoded, site2Proxy, url, reqHost) {
             a[i] = b.join('=');
         }
         body = a.join('&');
-        return body.replaceAll('%2B', ' ');
+        if (!hasSpecialSpace) {
+            body = body.replaceAll('%2B', ' ');
+        }
+        return body;
     } else {
         return body.replaceAll('http://', '/http://').replaceAll('https://', '/https://'); //.replaceAll('http:\\/\\/', '/http:\\/\\/').replaceAll('https:\\/\\/', '/https:\\/\\/');
     }
