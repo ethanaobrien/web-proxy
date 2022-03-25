@@ -5,7 +5,7 @@ const {ungzip} = require('node-gzip');
 const torrentStream = require('torrent-stream');
 const JSZip = require("jszip");
 const {MIMETYPES} = require("./mime.js");
-const isInstagramProxy = false;
+const isInstagramProxy = true;
 
 let port = 3000;
 const sites = [ //no '/' at end
@@ -94,7 +94,9 @@ function fetch(method, url, headers, body, site2Proxy) {
             })
             res.on('end', async function() {
                 if (res.headers['content-encoding'] && res.headers['content-encoding'] === 'gzip') {
-                    body = await ungzip(body);
+                    try {
+                        body = await ungzip(body);
+                    } catch(e){}
                 }
                 body = body.toString();
                 resolve([true, body, res.headers['content-type'], res.headers, res.statusCode])
@@ -110,7 +112,7 @@ function fetch(method, url, headers, body, site2Proxy) {
 
 function parseTextFile(body, isHtml, isUrlEncoded, site2Proxy, url, reqHost) {
     var {hostname} = new URL(site2Proxy);
-    body = body.replaceAll(site2Proxy+'/', '/').replaceAll(site2Proxy, '').replaceAll(site2Proxy.replaceAll('\\/', '/')+'/', '/').replaceAll(site2Proxy.replaceAll('\\/', '/'), '').replaceAll(hostname, reqHost).replaceAll('discord', 'discordddd');
+    body = body.replaceAll(site2Proxy+'/', '/').replaceAll(site2Proxy, '').replaceAll(site2Proxy.replaceAll('\\/', '/')+'/', '/').replaceAll(site2Proxy.replaceAll('\\/', '/'), '').replaceAll(hostname, reqHost).replaceAll('discord', 'discordddd').replaceAll('ws://', '/ws://').replaceAll('wss://', '/wss://');
     if (isHtml) {
         body = body.replaceAll('integrity=', 'sadfghj=').replaceAll('magnet:?', '/torrentStream?stage=step1&magnet=');
         var a = body.split('src');
