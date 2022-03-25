@@ -199,7 +199,7 @@ function torrent(req, res) {
             }
             res.setHeader('content-length', file.length);
             res.setHeader('accept-ranges','bytes');
-            if (MIMETYPES[file.name.split('.').pop()])) {
+            if (MIMETYPES[file.name.split('.').pop()]) {
                 res.setHeader('content-type', MIMETYPES[file.name.split('.').pop()]);
             }
             var fileOffset, fileEndOffset;
