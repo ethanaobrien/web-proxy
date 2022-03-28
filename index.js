@@ -114,7 +114,7 @@ function fetch(method, url, headers, body, site2Proxy) {
 function parseTextFile(body, isHtml, isUrlEncoded, site2Proxy, url, reqHost) {
     var origBody = body;
     var {hostname} = new URL(site2Proxy);
-    body = body.replaceAll(site2Proxy+'/', '/').replaceAll(site2Proxy, '').replaceAll(site2Proxy.replaceAll('\\/', '/')+'/', '/').replaceAll(site2Proxy.replaceAll('\\/', '/'), '').replaceAll(hostname, reqHost).replaceAll('discord', 'discordddd').replaceAll('ws://', '/ws://').replaceAll('wss://', 'wss:///wss://')
+    body = body.replaceAll(site2Proxy+'/', '/').replaceAll(site2Proxy, '').replaceAll(site2Proxy.replaceAll('\\/', '/')+'/', '/').replaceAll(site2Proxy.replaceAll('\\/', '/'), '').replaceAll(hostname, reqHost).replaceAll('discord', 'discordddd').replaceAll('wss://', 'wss://'+reqHost+'/')
     if (isHtml) {
         body = body.replaceAll('integrity=', 'sadfghj=').replaceAll('magnet:?', '/torrentStream?stage=step1&magnet=');
         var a = body.split('src');
@@ -143,10 +143,14 @@ function parseTextFile(body, isHtml, isUrlEncoded, site2Proxy, url, reqHost) {
         for (var i=0; i<a.length; i++) {
             var b = a[i].split('=');
             for (var j=0; j<b.length; j++) {
-                b[j] = encodeURIComponent(decodeURIComponent(b[j]).replaceAll(hostname, h));
-                if (decodeURIComponent(b[j]).includes(h)) {
-                    changed = true;
+                var c = b[j].split('+');
+                for (var k=0; k<c.length; k++) {
+                    c[k] = encodeURIComponent(decodeURIComponent(c[k]).replaceAll(hostname, h));
+                    if (decodeURIComponent(c[k]).includes(h)) {
+                        changed = true;
+                    }
                 }
+                b[j] = c.join('+');
             }
             a[i] = b.join('=');
         }
@@ -511,6 +515,7 @@ var server = http.createServer(async function(req, res) {
         body[1].pipe(res);
     }
 })
+
 server.on('clientError', function (err, socket) {
     if (err.code === 'ECONNRESET' || !socket.writable) {
         return;
