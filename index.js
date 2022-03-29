@@ -10,19 +10,18 @@ const absoluteProxySite = 'https://www.instagram.com';
 
 let port = 3000;
 const sites = [ //no '/' at end
-    'http://mikudb.moe',
-    'https://nyaa.si',
-    'https://downloads.khinsider.com',
-    'https://www.google.com',
-    'https://love-live.fandom.com',
-    'https://www.youtube.com', //broken, to fix
-    'https://schoolido.lu',
-    'https://github.com',
-    'https://emulatorjs.ga',
-    'https://myemulator.online',
-    'https://hack64.net',
-    'https://www.roblox.com',
-    'https://www.instagram.com' //broken, to fix
+    //site, isBuggy, display_name
+    ['http://mikudb.moe', false, 'mikudb'],
+    ['https://nyaa.si', false, 'nyaa.si'],
+    ['https://downloads.khinsider.com', false, 'khinsider'],
+    ['https://www.google.com', true, 'google'],
+    ['https://love-live.fandom.com', false, 'love live fandom'],
+    ['https://www.youtube.com', true, 'youtube'],
+    ['https://schoolido.lu', false, 'schoolido.lu'],
+    ['https://github.com', false, 'github'],
+    ['https://emulatorjs.ga', false, 'emulatorjs'],
+    ['https://www.instagram.com', true, 'instagram'],
+    ['https://www1.thepiratebay3.to', false, 'the pirate bay']
 ]
 
 if (! String.prototype.replaceAll) {
@@ -369,7 +368,7 @@ async function changeHtml(req, res) {
     var html = '';
     html += '<html><head><title>Change Site to Serve</title></head><body><ul><br><h1>Change Site to Serve</h1><br><br><ul><form action="" method="GET">';
     for (var i=0; i<sites.length; i++) {
-        html += '<input type="radio" id="'+encodeURIComponent(sites[i])+'" name="site" value="'+encodeURIComponent(sites[i])+'"><label for="'+encodeURIComponent(sites[i])+'">'+sites[i]+'</label><br>';
+        html += '<input type="radio" id="'+encodeURIComponent(sites[i][0])+'" name="site" value="'+encodeURIComponent(sites[i][0])+'"><label for="'+encodeURIComponent(sites[i][0])+'">'+sites[i][2]+(sites[i][1]?' (buggy)':'')+'</label><br>';
     }
     html += '<br><label for="custom">Custom URL</label><input type="text" id="custom" name="custom"><br><br><input type="submit" value="Submit"><ul></ul>'
     if (errMsg && errMsg.trim()) {
@@ -516,6 +515,81 @@ var server = http.createServer(async function(req, res) {
     }
 })
 
+function createHttpHeader(line, headers) {
+  return Object.keys(headers).reduce(function (head, key) {
+    var value = headers[key];
+
+    if (!Array.isArray(value)) {
+      head.push(key + ': ' + value);
+      return head;
+    }
+
+    for (var i = 0; i < value.length; i++) {
+      head.push(key + ': ' + value[i]);
+    }
+    return head;
+  }, [line])
+  .join('\r\n') + '\r\n\r\n';
+}
+
+/*
+server.on('upgrade', function(req, socket, head) {
+    console.log('upgrade')
+    if (head && head.length) socket.unshift(head);
+    socket.setTimeout(0);
+    socket.setNoDelay(true);
+    socket.setKeepAlive(true, 0);
+    var newHeaders = {};
+    var {hostname} = new URL('wss:/'+req.url);
+    var headers = req.headers;
+    if (headers) {
+        for (var k in headers) {
+            if (k.startsWith('x-replit') || k === 'accept-encoding') {
+                continue;
+            }
+            if (k === 'cookie') {
+                continue
+            }
+            newHeaders[k] = headers[k];
+        }
+    }
+    newHeaders['host'] = hostname;
+    var outgoing = {}
+    newHeaders['origin'] = 'https://www.instagram.com';
+    var proxyReq = https.request('https://edge-chat.instagram.com/chat');
+    for (var k in newHeaders) {
+        proxyReq.setHeader(k, newHeaders[k]);
+    }
+    
+    proxyReq.on('response', function(res) {
+        console.log('response')
+        if (!res.upgrade) {
+            console.log(res.statusCode)
+            console.log(res.headers)
+            socket.write(createHttpHeader('HTTP/' + res.httpVersion + ' ' + res.statusCode + ' ' + res.statusMessage, res.headers));
+            res.pipe(socket);
+        }
+    })
+    proxyReq.on('error', function(e){console.log('error')});
+    proxyReq.on('upgrade', function(proxyRes, proxySocket, proxyHead){
+        if (proxyHead && proxyHead.length) proxySocket.unshift(proxyHead);
+        proxySocket.setTimeout(0);
+        proxySocket.setNoDelay(true);
+        proxySocket.setKeepAlive(true, 0);
+        console.log('upgrade')
+        proxySocket.on('end', function (e) {
+            console.log('end', e)
+        });
+        proxySocket.on('error', function(e) {console.log(e)})
+        socket.write(createHttpHeader('HTTP/1.1 101 Switching Protocols', proxyRes.headers));
+        proxySocket.pipe(socket);
+        socket.pipe(proxySocket);
+        server.emit('open', proxySocket);
+        server.emit('proxySocket', proxySocket);
+    });
+    proxyReq.end();
+})
+*/
 server.on('clientError', function (err, socket) {
     if (err.code === 'ECONNRESET' || !socket.writable) {
         return;
