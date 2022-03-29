@@ -5,6 +5,7 @@ const {ungzip} = require('node-gzip');
 const torrentStream = require('torrent-stream');
 const JSZip = require("jszip");
 const {MIMETYPES} = require("./mime.js");
+const debug = false;
 const isAbsoluteProxy = false;
 const absoluteProxySite = 'https://www.instagram.com';
 
@@ -111,9 +112,22 @@ function fetch(method, url, headers, body, site2Proxy) {
 }
 
 function parseTextFile(body, isHtml, isUrlEncoded, site2Proxy, url, reqHost) {
+    var date = new Date();
     var origBody = body;
     var {hostname} = new URL(site2Proxy);
-    body = body.replaceAll(site2Proxy+'/', '/').replaceAll(site2Proxy, '').replaceAll(site2Proxy.replaceAll('\\/', '/')+'/', '/').replaceAll(site2Proxy.replaceAll('\\/', '/'), '').replaceAll(hostname, reqHost).replaceAll('discord', 'discordddd').replaceAll('wss://', 'wss://'+reqHost+'/')
+    body = body
+        .replaceAll('"'+site2Proxy+'/', '"/')
+        .replaceAll("'"+site2Proxy+'/', '\'/')
+        .replaceAll("'"+site2Proxy, '\'')
+        .replaceAll('"'+site2Proxy, '""')
+        .replaceAll("'"+site2Proxy.replaceAll('\\/', '/')+'/', '\'/')
+        .replaceAll('"'+site2Proxy.replaceAll('\\/', '/')+'/', '"/')
+        .replaceAll("'"+site2Proxy.replaceAll('\\/', '/'), '\'')
+        .replaceAll('"'+site2Proxy.replaceAll('\\/', '/'), '"')
+        .replaceAll("'"+hostname, "'"+reqHost)
+        .replaceAll('"'+hostname, '"'+reqHost)
+        .replaceAll('discord', 'discordddd')
+        .replaceAll('wss://', 'wss://'+reqHost+'/')
     if (isHtml) {
         body = body.replaceAll('integrity=', 'sadfghj=').replaceAll('magnet:?', '/torrentStream?stage=step1&magnet=');
         var a = body.split('src');
@@ -123,15 +137,43 @@ function parseTextFile(body, isHtml, isUrlEncoded, site2Proxy, url, reqHost) {
             }
         }
         body = a.join('src');
+        var a = body.split('//');
+        for (var i=1; i<a.length; i++) {
+            if ((a[i-1].endsWith('"') || a[i-1].endsWith("'")) &&
+                (a[i].split('\n')[0].includes('"') || a[i].split('\n')[0].includes("'"))) {
+                a[i-1]+='https:';
+            }
+        }
+        body = a.join('//');
         var a = body.split('http');
         for (var i=1; i<a.length; i++) {
-            if ((a[i].startsWith('://') || a[i].startsWith('s://')) &&
+            if ((a[i].startsWith('://') ||
+                 a[i].startsWith('s://') ||
+                 ((a[i].startsWith(':\\/\\/') ||
+                   a[i].startsWith('s:\\/\\/')) &&
+                  !a[i-1].endsWith('/'))) &&
                 !(a[i-1].endsWith('>')) &&
                 !(a[i-1].replaceAll('"', '').replaceAll("'", '').replaceAll(' ', '').endsWith('href='))) {
                 a[i-1] += '/';
             }
         }
         body = a.join('http');
+        var a = body.split('href');
+        for (var i=1; i<a.length; i++) {
+            if (a[i-1].split('<').pop().split(' ')[0] === 'a') {
+                continue;
+            }
+            if (a[i].replaceAll('=', '').replaceAll('"', '').replaceAll("'", '').startsWith('//')) {
+                a[i] = a[i].replace('//', 'https://');
+            }
+            if (a[i].replaceAll('=', '').replaceAll('"', '').replaceAll("'", '').startsWith('http')) {
+                a[i] = a[i].replace('http', '/http');
+            }
+        }
+        body = a.join('href');
+        if (debug) {
+            console.log('parse function (html) took '+(((new Date())-date)/1000)+' seconds');
+        }
         return body;
     } else if (isUrlEncoded) {
         var {hostname} = new URL(url);
@@ -157,9 +199,23 @@ function parseTextFile(body, isHtml, isUrlEncoded, site2Proxy, url, reqHost) {
             return origBody;
         }
         body = a.join('&');
+        if (debug) {
+            console.log('parse function (url encoded) took '+(((new Date())-date)/1000)+' seconds');
+        }
         return body;
     } else {
+        var a = body.split('//');
+        for (var i=1; i<a.length; i++) {
+            if ((a[i-1].endsWith('"') || a[i-1].endsWith("'")) &&
+                (a[i].split('\n')[0].includes('"') || a[i].split('\n')[0].includes("'"))) {
+                a[i-1]+='https:';
+            }
+        }
+        body = a.join('//');
         body = body.replaceAll('http://', '/http://').replaceAll('https://', '/https://'); //.replaceAll('http:\\/\\/', '/http:\\/\\/').replaceAll('https:\\/\\/', '/https:\\/\\/');
+        if (debug) {
+            console.log('parse function (javascript) took '+(((new Date())-date)/1000)+' seconds');
+        }
         return body;
     }
 }
@@ -515,6 +571,7 @@ var server = http.createServer(async function(req, res) {
     }
 })
 
+/*
 function createHttpHeader(line, headers) {
   return Object.keys(headers).reduce(function (head, key) {
     var value = headers[key];
@@ -532,7 +589,6 @@ function createHttpHeader(line, headers) {
   .join('\r\n') + '\r\n\r\n';
 }
 
-/*
 server.on('upgrade', function(req, socket, head) {
     console.log('upgrade')
     if (head && head.length) socket.unshift(head);
