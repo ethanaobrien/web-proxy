@@ -571,7 +571,7 @@ var server = http.createServer(async function(req, res) {
     }
 })
 
-/*
+
 function createHttpHeader(line, headers) {
   return Object.keys(headers).reduce(function (head, key) {
     var value = headers[key];
@@ -590,7 +590,6 @@ function createHttpHeader(line, headers) {
 }
 
 server.on('upgrade', function(req, socket, head) {
-    console.log('upgrade')
     if (head && head.length) socket.unshift(head);
     socket.setTimeout(0);
     socket.setNoDelay(true);
@@ -604,7 +603,12 @@ server.on('upgrade', function(req, socket, head) {
                 continue;
             }
             if (k === 'cookie') {
-                continue
+                if (! headers[k].includes('proxySite')) {
+                    newHeaders[k] = headers[k];
+                } else {
+                    newHeaders[k] = headers[k].replace('proxySite='+headers[k].split('proxySite=').pop().split(';')[0]+';', '').replaceAll('  ', ' ');
+                }
+                continue;
             }
             newHeaders[k] = headers[k];
         }
@@ -616,27 +620,20 @@ server.on('upgrade', function(req, socket, head) {
     for (var k in newHeaders) {
         proxyReq.setHeader(k, newHeaders[k]);
     }
-    
     proxyReq.on('response', function(res) {
-        console.log('response')
         if (!res.upgrade) {
-            console.log(res.statusCode)
-            console.log(res.headers)
             socket.write(createHttpHeader('HTTP/' + res.httpVersion + ' ' + res.statusCode + ' ' + res.statusMessage, res.headers));
             res.pipe(socket);
         }
     })
-    proxyReq.on('error', function(e){console.log('error')});
+    proxyReq.on('error', function(e){});
     proxyReq.on('upgrade', function(proxyRes, proxySocket, proxyHead){
         if (proxyHead && proxyHead.length) proxySocket.unshift(proxyHead);
         proxySocket.setTimeout(0);
         proxySocket.setNoDelay(true);
         proxySocket.setKeepAlive(true, 0);
-        console.log('upgrade')
-        proxySocket.on('end', function (e) {
-            console.log('end', e)
-        });
-        proxySocket.on('error', function(e) {console.log(e)})
+        proxySocket.on('end', function (e) {});
+        proxySocket.on('error', function(e) {})
         socket.write(createHttpHeader('HTTP/1.1 101 Switching Protocols', proxyRes.headers));
         proxySocket.pipe(socket);
         socket.pipe(proxySocket);
@@ -645,7 +642,7 @@ server.on('upgrade', function(req, socket, head) {
     });
     proxyReq.end();
 })
-*/
+
 server.on('clientError', function (err, socket) {
     if (err.code === 'ECONNRESET' || !socket.writable) {
         return;
