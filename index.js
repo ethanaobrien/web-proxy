@@ -603,7 +603,7 @@ server.on('upgrade', function(req, socket, head) {
                 continue;
             }
             if (k === 'cookie') {
-                if (! headers[k].includes('proxySite')) {
+                if (! headers[k].includes('proxySite=')) {
                     newHeaders[k] = headers[k];
                 } else {
                     newHeaders[k] = headers[k].replace('proxySite='+headers[k].split('proxySite=').pop().split(';')[0]+';', '').replaceAll('  ', ' ');
@@ -616,7 +616,7 @@ server.on('upgrade', function(req, socket, head) {
     newHeaders['host'] = hostname;
     var outgoing = {}
     newHeaders['origin'] = 'https://www.instagram.com';
-    var proxyReq = https.request('https://edge-chat.instagram.com/chat');
+    var proxyReq = https.request('https:/'+req.url);
     for (var k in newHeaders) {
         proxyReq.setHeader(k, newHeaders[k]);
     }
