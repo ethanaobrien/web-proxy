@@ -119,7 +119,7 @@ function parseTextFile(body, isHtml, isUrlEncoded, site2Proxy, url, reqHost) {
         .replaceAll('"'+site2Proxy+'/', '"/')
         .replaceAll("'"+site2Proxy+'/', '\'/')
         .replaceAll("'"+site2Proxy, '\'')
-        .replaceAll('"'+site2Proxy, '""')
+        .replaceAll('"'+site2Proxy, '"')
         .replaceAll("'"+site2Proxy.replaceAll('\\/', '/')+'/', '\'/')
         .replaceAll('"'+site2Proxy.replaceAll('\\/', '/')+'/', '"/')
         .replaceAll("'"+site2Proxy.replaceAll('\\/', '/'), '\'')
@@ -172,9 +172,9 @@ function parseTextFile(body, isHtml, isUrlEncoded, site2Proxy, url, reqHost) {
         }
         body = a.join('href');
         if (debug) {
-            console.log('parse function (html) took '+(((new Date())-date)/1000)+' seconds');
+            console.log('html parsing took '+(((new Date())-date)/1000)+' seconds');
         }
-        return body;
+        return body.replaceAll('/https://', '/https:/').replaceAll('/http://', '/https:/');
     } else if (isUrlEncoded) {
         var {hostname} = new URL(url);
         var h = hostname;
@@ -200,7 +200,7 @@ function parseTextFile(body, isHtml, isUrlEncoded, site2Proxy, url, reqHost) {
         }
         body = a.join('&');
         if (debug) {
-            console.log('parse function (url encoded) took '+(((new Date())-date)/1000)+' seconds');
+            console.log('url encoded parsing took '+(((new Date())-date)/1000)+' seconds');
         }
         return body;
     } else {
@@ -214,9 +214,9 @@ function parseTextFile(body, isHtml, isUrlEncoded, site2Proxy, url, reqHost) {
         body = a.join('//');
         body = body.replaceAll('http://', '/http://').replaceAll('https://', '/https://'); //.replaceAll('http:\\/\\/', '/http:\\/\\/').replaceAll('https:\\/\\/', '/https:\\/\\/');
         if (debug) {
-            console.log('parse function (javascript) took '+(((new Date())-date)/1000)+' seconds');
+            console.log('javascript parsing took '+(((new Date())-date)/1000)+' seconds');
         }
-        return body;
+        return body.replaceAll('/https://', '/https:/').replaceAll('/http://', '/https:/');
     }
 }
 
@@ -458,6 +458,12 @@ var server = http.createServer(async function(req, res) {
         res.end();
         return;
     }
+    if (req.url.startsWith('/http') && (req.url.substring(1).startsWith('https://'+req.headers.host) || req.url.substring(1).startsWith('https:/'+req.headers.host) || req.url.substring(1).startsWith('http://'+req.headers.host) || req.url.substring(1).startsWith('http:/'+req.headers.host))) {
+        res.setHeader('location', req.url.split('/'+req.headers.host).pop().replaceAll('//', '/'));
+        res.writeHead(301);
+        res.end();
+        return;
+    }
     var url = req.url.startsWith('/http') ? req.url.substring(1) : site2Proxy+req.url;
     if (req.url.startsWith('/https') && req.url.startsWith('/https:/') && !req.url.startsWith('/https://')) {
         url = req.url.substring(1).replace('https:/', 'https://')
@@ -475,6 +481,7 @@ var server = http.createServer(async function(req, res) {
     if (args.nc) {
         url = removeArg(url, 'nc');
     }
+    url=url.replaceAll('https%3A%2F%2F%2F', '');
     var vc = args.vc, nc = args.nc;
     var reqBody = await new Promise(function(resolve, reject) {
         var body = Buffer.from('')
@@ -549,12 +556,15 @@ var server = http.createServer(async function(req, res) {
     }
     if (body[0] === true) {
         var code = body[4];
+        var mime = body[2];
         //javascript/html parsing
         if (!nc || (nc != '1' && nc != 'true')) {
-            var mime = body[2];
             body = parseTextFile(body[1], body[2].includes('html'), body[2].includes('x-www-form-urlencoded'), site2Proxy, url, host);
         } else {
             body = body[1];
+        }
+        if (isAbsoluteProxy && absoluteProxySite === 'https://www.instagram.com' && mime.includes('javascript') && !url.includes('worker')) {
+            body+='\nif (typeof window !== undefined && typeof document !== undefined && !window.checkInterval) {window.checkInterval=setInterval(function(){document.querySelectorAll("svg").forEach(e => {if (e.attributes["aria-label"]&&e.attributes["aria-label"].textContent) {e.innerHTML = e.attributes["aria-label"].textContent}})}, 200)}';
         }
         if (args.video && ['1', 'true'].includes(args.video) && body.includes('View High Qual')) {
             var videoUrl = ('/'+body.split('">View High Qual')[0].split('href="').pop());
@@ -595,7 +605,7 @@ server.on('upgrade', function(req, socket, head) {
     socket.setNoDelay(true);
     socket.setKeepAlive(true, 0);
     var newHeaders = {};
-    var {hostname} = new URL('wss:/'+req.url);
+    var {hostname,pathname,search} = new URL('wss:/'+req.url);
     var headers = req.headers;
     if (headers) {
         for (var k in headers) {
@@ -614,8 +624,15 @@ server.on('upgrade', function(req, socket, head) {
         }
     }
     newHeaders['host'] = hostname;
-    var outgoing = {}
-    newHeaders['origin'] = 'https://www.instagram.com';
+    var outgoing = {};
+    var origin = '';
+    if (req.headers.cookie.includes('proxySite=')) {
+        origin = 'https://'+req.headers.cookie.split('proxySite=').pop().split(';')[0];
+    }
+    if (isAbsoluteProxy) {
+        origin = absoluteProxySite;
+    }
+    newHeaders['origin'] = origin;
     var proxyReq = https.request('https:/'+req.url);
     for (var k in newHeaders) {
         proxyReq.setHeader(k, newHeaders[k]);
@@ -634,6 +651,7 @@ server.on('upgrade', function(req, socket, head) {
         proxySocket.setKeepAlive(true, 0);
         proxySocket.on('end', function (e) {});
         proxySocket.on('error', function(e) {})
+        socket.on('error', function(e) {})
         socket.write(createHttpHeader('HTTP/1.1 101 Switching Protocols', proxyRes.headers));
         proxySocket.pipe(socket);
         socket.pipe(proxySocket);
