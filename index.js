@@ -369,7 +369,7 @@ function check4Redirects(url) {
                 res.resume();
                 resolve(false);
             }
-        });
+        }).on('error', reject);
     })
 }
 
