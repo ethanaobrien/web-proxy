@@ -482,6 +482,7 @@ var server = http.createServer(async function(req, res) {
         url = removeArg(url, 'nc');
     }
     url=url.replaceAll('https%3A%2F%2F%2F', '');
+    url=url.replaceAll('https%3A%2F'+req.headers.host, 'https%3A%2F%2F'+req.headers.host);
     var vc = args.vc, nc = args.nc;
     var reqBody = await new Promise(function(resolve, reject) {
         var body = Buffer.from('')
