@@ -31,7 +31,7 @@ if (! String.prototype.replaceAll) {
     }
 }
 
-function fetch(method, url, headers, body, site2Proxy) {
+function fetch(method, url, headers, body, site2Proxy, reqHost) {
     return new Promise(function(resolve, reject) {
         var newHeaders = {};
         var {hostname} = new URL(url);
@@ -53,14 +53,11 @@ function fetch(method, url, headers, body, site2Proxy) {
                         }
                     }
                     var cookie = '';
-                    for (var i=0; i<cookies.length; i++) {
-                        cookie += (cookies[i] + '; ');
-                    }
-                    cookie.substring(0, cookie.length-2);
+                    cookie = cookies.join('; ');
                     newHeaders[k] = cookie;
                     continue
                 }
-                if (headers[k].includes('repl.co')) {
+                if (headers[k].includes(reqHost)) {
                     headers[k] = headers[k].replaceAll(headers[k].split('https://').pop().split('/')[0], site2Proxy.split('://').pop())
                 }
                 newHeaders[k] = headers[k];
@@ -499,7 +496,7 @@ var server = http.createServer(async function(req, res) {
         reqBody = Buffer.from(parseTextFile(reqBody.toString(), false, true, site2Proxy, url, host));
     }
     try {
-        var body = await fetch(req.method, url, req.headers, reqBody, site2Proxy);
+        var body = await fetch(req.method, url, req.headers, reqBody, site2Proxy, host);
     } catch(e) {
         res.writeHead(404);
         res.end('error');
@@ -614,12 +611,24 @@ server.on('upgrade', function(req, socket, head) {
                 continue;
             }
             if (k === 'cookie') {
-                if (! headers[k].includes('proxySite=')) {
-                    newHeaders[k] = headers[k];
-                } else {
-                    newHeaders[k] = headers[k].replace('proxySite='+headers[k].split('proxySite=').pop().split(';')[0]+';', '').replaceAll('  ', ' ');
+                var cookies = [];
+                var ck = headers[k].split(';');
+                for (var i=0; i<ck.length; i++) {
+                    if (isAbsoluteProxy) {
+                        if (!ck[i].includes('proxySite')) {
+                            cookies.push(ck[i].trim());
+                        }
+                    } else if (ck[i].trim().split('_')[0].trim() === hostname && !ck[i].includes('proxySite')) {
+                        cookies.push(ck[i].trim().split(ck[i].trim().split('_')[0].trim()+'_').pop());
+                    }
                 }
+                var cookie = '';
+                cookie = cookies.join('; ')
+                newHeaders[k] = cookie;
                 continue;
+            }
+            if (headers[k].includes(hostname)) {
+                headers[k] = headers[k].replaceAll(headers[k].split('https://').pop().split('/')[0], site2Proxy.split('://').pop())
             }
             newHeaders[k] = headers[k];
         }
