@@ -289,6 +289,7 @@ function torrent(req, res) {
                 }
                 html += ' src="'+downloadUrl+'"></'+tagName+'>';
                 html +='</body></html>';
+                console.log(html)
                 res.end(Buffer.concat([Buffer.from(new Uint8Array([0xEF,0xBB,0xBF])), Buffer.from(html)]));
                 return;
             }
