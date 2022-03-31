@@ -236,14 +236,16 @@ function transformArgs(url) {
 
 function torrent(req, res) {
     res.writeContinue();
-    var stage = req.url.split('stage=').pop().split('&')[0];
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    var args = transformArgs(req.url.split('magnet=')[0]);
+    var stage = args.stage;
     var magnet = req.url.split('magnet=').pop();
     var engine = torrentStream('magnet:?'+magnet);
     var ready = setTimeout(function() {
         engine.destroy();
         res.end('timeout getting torrent metedata');
-    }, 25000);
-    engine.on('ready', function() {
+    }, 20000);
+    engine.on('ready', function ab() {
         clearTimeout(ready);
         var files = engine.files;
         var torrentName = engine.torrent.name;
@@ -251,7 +253,7 @@ function torrent(req, res) {
             var html = '<html><head><title>Download</title></head><body><br><ul><h1>Download</h1><br><ul>';
             for (var i=0; i<files.length; i++) {
                 var downloadUrl = '/torrentStream?fileName='+encodeURIComponent(files[i].path)+'&stage=step2&magnet='+magnet;
-                var downloadUrl3 = '/torrentStream?fileName='+encodeURIComponent(files[i].path)+'&stage=step2&stream=on&magnet='+magnet;
+                var downloadUrl3 = '/torrentStream?fileName='+encodeURIComponent(files[i].path)+'&stage=step2&stream=on&fetchFile=no&magnet='+magnet;
                 html += '<li><a style="text-decoration:none" href="'+downloadUrl+'">'+files[i].path+'</a> - <a style="text-decoration:none" href="'+downloadUrl3+'">stream</a></li>';
             }
             var downloadUrl2 = '/torrentStream?stage=dlAsZip&magnet='+magnet;
@@ -261,7 +263,7 @@ function torrent(req, res) {
             res.writeHead(200);
             res.end(Buffer.concat([Buffer.from(new Uint8Array([0xEF,0xBB,0xBF])), Buffer.from(html)]));
         } else if (stage === 'step2') {
-            var fileName = decodeURIComponent(req.url.split('fileName=').pop().split('&')[0]);
+            var fileName = args.fileName;
             var file;
             for (var i=0; i<files.length; i++) {
                 if (files[i].path === fileName) {
@@ -275,13 +277,28 @@ function torrent(req, res) {
                 engine.destroy();
                 return;
             }
+            var ct = MIMETYPES[file.name.split('.').pop()].split('/')[0];
+            if (args.stream === 'on' && args.fetchFile === 'no' && ['audio', 'video', 'image'].includes(ct)) {
+                var downloadUrl = '/torrentStream?fileName='+encodeURIComponent(file.path)+'&stage=step2&stream=on&magnet='+magnet;
+                var tagName = ['video', 'audio'].includes(ct) ? ct : 'img';
+                res.setHeader('content-type', MIMETYPES.html+' chartset=utf-8');
+                var html = '<html><head></head><body>';
+                html += ('<'+tagName)
+                if (['video', 'image'].includes(ct)) {
+                    html += ' width="75%" height="75%"';
+                }
+                html += ' src="'+downloadUrl+'"></'+tagName+'>';
+                html +='</body></html>';
+                res.end(Buffer.concat([Buffer.from(new Uint8Array([0xEF,0xBB,0xBF])), Buffer.from(html)]));
+                return;
+            }
             res.setHeader('content-length', file.length);
             res.setHeader('accept-ranges','bytes');
             if (MIMETYPES[file.name.split('.').pop()]) {
-                res.setHeader('content-type', MIMETYPES[file.name.split('.').pop()]);
+                res.setHeader('content-type', MIMETYPES[file.name.split('.').pop().toLowerCase()]);
             }
             var fileOffset, fileEndOffset;
-            if ((req.url.includes('stream=') && req.url.split('stream=').pop().split('&')[0] === 'on') || req.headers['range']) {
+            if ((args.stream && args.stream === 'on') || req.headers['range']) {
                 res.setHeader('Content-Disposition', 'inline; filename="'+encodeURIComponent(fileName)+'"');
             } else {
                 res.setHeader('Content-Disposition', 'attachment; filename="'+encodeURIComponent(fileName)+'"');
@@ -332,6 +349,7 @@ function torrent(req, res) {
             for (var i=0; i<files.length; i++) {
                 zip.file(files[i].path, files[i].createReadStream())
             }
+            res.setHeader('content-type', 'application/zip');
             res.setHeader('Content-Disposition', 'attachment; filename="'+encodeURIComponent(torrentName+'.zip')+'"');
             res.writeHead(200);
             var stream = zip.generateNodeStream({streamFiles:true});
