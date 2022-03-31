@@ -282,8 +282,8 @@ function torrent(req, res) {
                 var downloadUrl = '/torrentStream?fileName='+encodeURIComponent(file.path)+'&stage=step2&stream=on&magnet='+magnet;
                 var tagName = ['video', 'audio'].includes(ct) ? ct : 'img';
                 res.setHeader('content-type', MIMETYPES.html+' chartset=utf-8');
-                var html = '<html><head></head><body>';
-                html += ('<'+tagName)
+                var html = '<html><head></head><body><br><br><br><center>';
+                html += ('<'+tagName);
                 if (['video', 'image'].includes(ct)) {
                     html += ' height="75%"';
                 }
@@ -291,7 +291,7 @@ function torrent(req, res) {
                     html += ' controls';
                 }
                 html += ' src="'+downloadUrl+'"></'+tagName+'>';
-                html +='</body></html>';
+                html +='</center></body></html>';
                 res.end(Buffer.concat([Buffer.from(new Uint8Array([0xEF,0xBB,0xBF])), Buffer.from(html)]));
                 return;
             }
