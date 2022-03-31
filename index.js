@@ -287,9 +287,11 @@ function torrent(req, res) {
                 if (['video', 'image'].includes(ct)) {
                     html += ' height="75%"';
                 }
+                if (['video', 'audio'].includes(ct)) {
+                    html += ' controls';
+                }
                 html += ' src="'+downloadUrl+'"></'+tagName+'>';
                 html +='</body></html>';
-                console.log(html)
                 res.end(Buffer.concat([Buffer.from(new Uint8Array([0xEF,0xBB,0xBF])), Buffer.from(html)]));
                 return;
             }
