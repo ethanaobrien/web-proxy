@@ -240,7 +240,11 @@ function torrent(req, res) {
     var args = transformArgs(req.url.split('magnet=')[0]);
     var stage = args.stage;
     var magnet = req.url.split('magnet=').pop();
-    var engine = torrentStream('magnet:?'+magnet);
+    try {
+        var engine = torrentStream('magnet:?'+magnet);
+    } catch(e) {
+        res.end('error getting torrent metedata');
+    }
     var ready = setTimeout(function() {
         engine.destroy();
         res.end('timeout getting torrent metedata');
@@ -291,7 +295,6 @@ function torrent(req, res) {
                     html += ' controls preload=auto';
                 }
                 html += ' id="element" src="'+downloadUrl+'"></'+tagName+'>';
-                
                 if (['video', 'audio'].includes(ct)) {
                     html += '<script>var element = document.getElementById("element");element.addEventListener("abort", function(e){var a=element.src;element.src=a;element.play()});element.addEventListener("error", function(e){var a=element.src;element.src=a;element.play()});element.play();</script>';
                 }
