@@ -245,7 +245,7 @@ function torrent(req, res) {
         engine.destroy();
         res.end('timeout getting torrent metedata');
     }, 20000);
-    engine.on('ready', function ab() {
+    engine.on('ready', function () {
         clearTimeout(ready);
         var files = engine.files;
         var torrentName = engine.torrent.name;
@@ -285,7 +285,7 @@ function torrent(req, res) {
                 var html = '<html><head></head><body>';
                 html += ('<'+tagName)
                 if (['video', 'image'].includes(ct)) {
-                    html += ' width="75%" height="75%"';
+                    html += ' max-width="75%" max-height="75%"';
                 }
                 html += ' src="'+downloadUrl+'"></'+tagName+'>';
                 html +='</body></html>';
