@@ -288,9 +288,13 @@ function torrent(req, res) {
                     html += ' height="75%"';
                 }
                 if (['video', 'audio'].includes(ct)) {
-                    html += ' controls';
+                    html += ' controls preload=auto';
                 }
-                html += ' src="'+downloadUrl+'"></'+tagName+'>';
+                html += ' id="element" src="'+downloadUrl+'"></'+tagName+'>';
+                
+                if (['video', 'audio'].includes(ct)) {
+                    html += '<script>var element = document.getElementById("element");element.addEventListener("abort", function(e){var a=element.src;element.src=a;element.play()});element.addEventListener("error", function(e){var a=element.src;element.src=a;element.play()});element.play();</script>';
+                }
                 html +='</center></body></html>';
                 res.end(Buffer.concat([Buffer.from(new Uint8Array([0xEF,0xBB,0xBF])), Buffer.from(html)]));
                 return;
