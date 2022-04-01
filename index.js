@@ -244,6 +244,7 @@ function torrent(req, res) {
         var engine = torrentStream('magnet:?'+magnet);
     } catch(e) {
         res.end('error getting torrent metedata');
+        return;
     }
     var ready = setTimeout(function() {
         engine.destroy();
