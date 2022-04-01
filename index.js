@@ -265,7 +265,8 @@ function torrent(req, res) {
             for (var i=0; i<files.length; i++) {
                 var downloadUrl = '/torrentStream?fileName='+encodeURIComponent(files[i].path)+'&stage=step2&magnet='+magnet;
                 var downloadUrl3 = '/torrentStream?fileName='+encodeURIComponent(files[i].path)+'&stage=step2&stream=on&fetchFile=no&magnet='+magnet;
-                html += '<li><a style="text-decoration:none" href="'+downloadUrl+'">'+files[i].path+'</a> - <a style="text-decoration:none" href="'+downloadUrl3+'">stream</a></li>';
+                var downloadUrl4 = '/torrentStream?fileName='+encodeURIComponent(files[i].path)+'&stage=step2&stream=on&magnet='+magnet;
+                html += '<li><a style="text-decoration:none" href="'+downloadUrl+'">'+files[i].path+'</a> - <a style="text-decoration:none" href="'+downloadUrl4+'">classic stream</a> - <a style="text-decoration:none" href="'+downloadUrl3+'">stream</a></li>';
             }
             var downloadUrl2 = '/torrentStream?stage=dlAsZip&magnet='+magnet;
             html += '</ul><br><a style="text-decoration:none" href="'+downloadUrl2+'">Download All As Zip</a></ul><br></body></html>';
