@@ -9,9 +9,6 @@ const debug = false;
 const isAbsoluteProxy = false;
 const absoluteProxySite = 'https://www.instagram.com';
 
-//todo: no absolute proxy site required, detect cookies set via javascript and also set via site, when site to change page is loaded it will clear all these cookies (to be safe) and these cookies need to be re-defined when the site is called (basically, store cookies for current site not only with the domain at the beginning, but also set without the domain at the beginning)
-//todo: cookie "domain=" detection (check if site host fits requirements)
-
 let port = 3000;
 const sites = [ //no '/' at end
     //site, isBuggy, display_name
@@ -34,41 +31,9 @@ if (! String.prototype.replaceAll) {
     }
 }
 
-function parseSetCookie(cookie, hostname) {
-    var cookieHeader;
-    if (cookie.includes('Domain=')) {
-    cookieHeader = cookie.split('Domain=').pop().split(';')[0];
-        cookie = cookie.replaceAll('Domain='+cookie.split('Domain=').pop().split(';')[0]+';', '').replaceAll('  ', ' ');
-    }
-    if (! cookieHeader) {
-        cookieHeader = hostname;
-    }
-    if (isAbsoluteProxy) {
-        return cookie.trim();
-    } else {
-        return 'ck_'+(cookie.includes('HttpOnly')?1:0)+'_'+cookieHeader+'_'+cookie.trim();
-    }
-}
-
-function parseResCookie(cookie, hostname) {
-    cookie = cookie.trim();
-    if (! cookie.startsWith('ck_') || isAbsoluteProxy) {
-        return [cookie.trim(), null];
-    }
-    var parts = cookie.split('_');
-    var httpOnly = parseInt(parts[1]);
-    var allowHost = parts[2];
-    var reqHost = new RegExp(allowHost);
-    if (hostname.match(reqHost) !== null) {
-        return [cookie.replace('ck_'+parts[1]+'_'+parts[2]+'_', '').trim(), null];
-    }
-    return null;
-}
-
 function fetch(method, url, headers, body, site2Proxy, reqHost) {
     return new Promise(function(resolve, reject) {
         var newHeaders = {};
-        var needsToSetCookies = [];
         var {hostname} = new URL(url);
         if (headers) {
             for (var k in headers) {
@@ -82,15 +47,15 @@ function fetch(method, url, headers, body, site2Proxy, reqHost) {
                         if (ck[i].includes('proxySite') || ck[i].includes('proxyJSReplace')) {
                             continue;
                         }
-                        var a = parseResCookie(ck[i], hostname);
-                        if (a !== null) {
-                            cookies.push(a[0]);
-                            if (a[1] !== null) {
-                                needsToSetCookies.push(a[1]);
-                            }
+                        if (isAbsoluteProxy) {
+                            cookies.push(ck[i].trim());
+                        } else if (ck[i].trim().split('_')[0].trim() === hostname) {
+                            cookies.push(ck[i].trim().split(ck[i].trim().split('_')[0].trim()+'_').pop());
                         }
                     }
-                    newHeaders[k] = cookies.join('; ');
+                    var cookie = '';
+                    cookie = cookies.join('; ');
+                    newHeaders[k] = cookie;
                     continue
                 }
                 if (headers[k].includes(reqHost)) {
@@ -117,7 +82,7 @@ function fetch(method, url, headers, body, site2Proxy, reqHost) {
                   res.headers['content-type'].includes('html') ||
                   res.headers['content-type'].includes('json') ||
                   res.headers['content-type'].includes('x-www-form-urlencoded')))) {
-                resolve([false, res, res.headers['content-type'], res.headers, res.statusCode, needsToSetCookies])
+                resolve([false, res, res.headers['content-type'], res.headers, res.statusCode])
                 return;
             }
             var body = Buffer.from('')
@@ -133,7 +98,7 @@ function fetch(method, url, headers, body, site2Proxy, reqHost) {
                     } catch(e){}
                 }
                 body = body.toString();
-                resolve([true, body, res.headers['content-type'], res.headers, res.statusCode, needsToSetCookies])
+                resolve([true, body, res.headers['content-type'], res.headers, res.statusCode])
             })
         })
         req.on('error', function(e) {
@@ -581,7 +546,6 @@ var server = http.createServer(async function(req, res) {
     try {
         var body = await fetch(req.method, url, req.headers, reqBody, site2Proxy, host);
     } catch(e) {
-        console.log(e)
         res.writeHead(404);
         res.end('error');
         return;
@@ -601,13 +565,29 @@ var server = http.createServer(async function(req, res) {
         if (k === 'set-cookie') {
             var {hostname} = new URL(url);
             if (Array.isArray(body[3][k])) {
-                var cookies = [];
+                var cookies = []; //httpOnly cookies seem to break
                 for (var i=0; i<body[3][k].length; i++) {
-                    cookies.push(parseSetCookie(body[3][k][i], hostname));
+                    if (body[3][k][i].includes('Domain=')) {
+                        body[3][k][i] = body[3][k][i].replaceAll('Domain='+body[3][k][i].split('Domain=').pop().split(';')[0]+';', '').replaceAll('  ', ' ');
+                    }
+                    if (body[3][k][i].includes('domain=')) {
+                        body[3][k][i] = body[3][k][i].replaceAll('domain='+body[3][k][i].split('domain=').pop().split(';')[0]+';', '').replaceAll('  ', ' ');
+                    }
+                    if (isAbsoluteProxy) {
+                        cookies.push(body[3][k][i])
+                    } else {
+                        cookies.push(hostname+'_'+body[3][k][i])
+                    }
                 }
                 res.setHeader(k, cookies);
             } else {
-                res.setHeader(k, parseSetCookie(body[3][k], hostname));
+                if (body[3][k].includes('Domain=')) {
+                    body[3][k] = body[3][k].replaceAll('Domain='+body[3][k].split('Domain=').pop().split(';')[0]+';', '').replaceAll('  ', ' ');
+                }
+                if (body[3][k].includes('domain=')) {
+                    body[3][k] = body[3][k].replaceAll('domain='+body[3][k].split('domain=').pop().split(';')[0]+';', '').replaceAll('  ', ' ');
+                }
+                res.setHeader(k, hostname+'_'+body[3][k]);
             }
             continue;
         }
@@ -619,16 +599,6 @@ var server = http.createServer(async function(req, res) {
     }
     if (vc == 'true' || vc == '1' || nc == 'true' || nc == '1') {
         res.setHeader('content-type', 'text/plain')
-    }
-    if (body[5].length > 0) {
-        var a = res.getHeader('set-cookie');
-        if (!a) {
-            a = [];
-        }
-        for (var i=0; i<body[5].length; i++) {
-            a.push(body[5][i]);
-        }
-        res.setHeader('set-cookie', a);
     }
     if (body[0] === true) {
         var code = body[4];
