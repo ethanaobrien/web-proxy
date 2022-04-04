@@ -1,4 +1,6 @@
 const {ungzip} = require('node-gzip');
+const https = require('https');
+const http = require('http');
 
 if (! String.prototype.replaceAll) {
     String.prototype.replaceAll = function(a, b) {
