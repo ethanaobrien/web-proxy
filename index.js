@@ -306,14 +306,16 @@ function torrent(req, res) {
                 }
                 html += '<h2>'+file.name+'</h2><br>';
                 var nb = getConcurentFiles(file.path, files, magnet);
-                if (nb[0]) {
-                    html += '<a href="'+nb[0]+'" class="previous nb">&laquo; Previous</a>';
-                }
-                if (nb[0] && nb[1]) {
-                    html += ' ';
-                }
-                if (nb[1]) {
-                    html += '<a href="'+nb[1]+'" class="next nb">Next &raquo;</a>';
+                if (nb) {
+                    if (nb[0]) {
+                        html += '<a href="'+nb[0]+'" class="previous nb">&laquo; Previous</a>';
+                    }
+                    if (nb[0] && nb[1]) {
+                        html += ' ';
+                    }
+                    if (nb[1]) {
+                        html += '<a href="'+nb[1]+'" class="next nb">Next &raquo;</a>';
+                    }
                 }
                 html += '</center><br><ul>';
                 html += generateTorrentTree(files, magnet);
