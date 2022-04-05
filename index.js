@@ -12,8 +12,10 @@ const {
     generateTorrentTree
 } = require("./utils.js");
 const debug = false;
-const isAbsoluteProxy = false;
-const absoluteProxySite = 'https://www.instagram.com';
+
+//todo
+// next/back button on torrent stream page
+// iframe other torrent file types?
 
 let port = 3000;
 const sites = [ //no '/' at end
@@ -31,10 +33,10 @@ const sites = [ //no '/' at end
     ['https://www1.thepiratebay3.to', false, 'the pirate bay']
 ]
 
-function parseSetCookie(cookie, hostname) {
+function parseSetCookie(cookie, hostname, isAbsoluteProxy) {
     var cookieHeader;
     if (cookie.includes('Domain=')) {
-    cookieHeader = cookie.split('Domain=').pop().split(';')[0];
+        cookieHeader = cookie.split('Domain=').pop().split(';')[0];
         cookie = cookie.replaceAll('Domain='+cookie.split('Domain=').pop().split(';')[0]+';', '').replaceAll('  ', ' ');
     }
     if (! cookieHeader) {
@@ -47,7 +49,7 @@ function parseSetCookie(cookie, hostname) {
     }
 }
 
-function parseResCookie(cookie, hostname) {
+function parseResCookie(cookie, hostname, isAbsoluteProxy) {
     cookie = cookie.trim();
     if (! cookie.startsWith('ck_') || isAbsoluteProxy) {
         return [cookie.trim(), null];
@@ -62,7 +64,7 @@ function parseResCookie(cookie, hostname) {
     return null;
 }
 
-function fetch(method, url, headers, body, site2Proxy, reqHost) {
+function fetch(method, url, headers, body, opts, reqHost) {
     return new Promise(function(resolve, reject) {
         var newHeaders = {};
         var needsToSetCookies = [];
@@ -76,10 +78,10 @@ function fetch(method, url, headers, body, site2Proxy, reqHost) {
                     var cookies = [];
                     var ck = headers[k].split(';');
                     for (var i=0; i<ck.length; i++) {
-                        if (ck[i].includes('proxySite') || ck[i].includes('proxyJSReplace')) {
+                        if (ck[i].includes('proxySettings')) {
                             continue;
                         }
-                        var a = parseResCookie(ck[i], hostname);
+                        var a = parseResCookie(ck[i], hostname, opts.isAbsoluteProxy);
                         if (a !== null) {
                             cookies.push(a[0]);
                             if (a[1] !== null) {
@@ -91,7 +93,7 @@ function fetch(method, url, headers, body, site2Proxy, reqHost) {
                     continue
                 }
                 if (headers[k].includes(reqHost)) {
-                    headers[k] = headers[k].replaceAll(headers[k].split('https://').pop().split('/')[0], site2Proxy.split('://').pop())
+                    headers[k] = headers[k].replaceAll(headers[k].split('https://').pop().split('/')[0], opts.site2Proxy.split('://').pop())
                 }
                 newHeaders[k] = headers[k];
             }
@@ -237,7 +239,7 @@ function parseTextFile(body, isHtml, isUrlEncoded, site2Proxy, url, reqHost, pro
         if (site2Proxy.includes('youtube')) {
             body = body.replaceAll('www.youtube.com', reqHost).replaceAll('youtube.com', reqHost).replaceAll('www.', '').replaceAll('!a.u.startsWith("local")', 'false');
         }
-        return body.replaceAll('/https://', '/https:/').replaceAll('/http://', '/https:/')
+        return body.replaceAll('/https://', '/https://').replaceAll('/http://', '/https://')
     }
 }
 
@@ -306,7 +308,10 @@ function torrent(req, res) {
                 html += '<br><h2>'+file.name+'</h2></center><br><br>';
                 html += generateTorrentTree(files, magnet);
                 html += '<br><br></body></html>';
-                res.end(Buffer.concat([Buffer.from(new Uint8Array([0xEF,0xBB,0xBF])), Buffer.from(html)]));
+                html = Buffer.concat([Buffer.from(new Uint8Array([0xEF,0xBB,0xBF])), Buffer.from(html)]);
+                res.setHeader('content-length', html.byteLength);
+                res.writeHead(200);
+                res.end(html);
                 return;
             }
             res.setHeader('content-length', file.length);
@@ -372,10 +377,6 @@ function torrent(req, res) {
 }
 
 async function changeHtml(req, res) {
-    if (isAbsoluteProxy) {
-        res.end('absolute proxy mode turned on. Turn off to change site to serve.');
-        return;
-    }
     var errMsg = '';
     if (req.url.includes('?')) {
         var args = transformArgs(req.url);
@@ -410,7 +411,7 @@ async function changeHtml(req, res) {
                 }
             }
             if (!error) {
-                res.setHeader('set-cookie', ['proxyJSReplace='+(args.JSReplaceURL ? 'true' : 'false'), 'proxySite='+(args.custom ? args.custom : args.site)]);
+                res.setHeader('set-cookie', 'proxySettings='+(args.custom?encodeURIComponent(args.custom):args.site)+'_'+(args.JSReplaceURL?'1':'0')+'_'+(args.absoluteSite?'1':'0')+'; Max-Age=2592000; HttpOnly');
                 res.setHeader('location', path2Redir2 || '/');
                 res.setHeader('content-length', 0);
                 res.writeHead(307);
@@ -425,12 +426,13 @@ async function changeHtml(req, res) {
     for (var i=0; i<sites.length; i++) {
         html += '<input type="radio" id="'+encodeURIComponent(sites[i][0])+'" name="site" value="'+encodeURIComponent(sites[i][0])+'"><label for="'+encodeURIComponent(sites[i][0])+'">'+sites[i][2]+(sites[i][1]?' (buggy)':'')+'</label><br>';
     }
-    html += '<br><label for="custom">Custom URL</label><input type="text" id="custom" name="custom"><br><br><input type="checkbox" id="JSReplaceURL" name="JSReplaceURL" value="true" checked><label for="JSReplaceURL"> Replace Javascript // urls (may break some sites)</label><br><br><input type="submit" value="Submit"><ul></ul>'
+    html += '<br><label for="custom">Custom URL</label><input type="text" id="custom" name="custom"><br><br><input type="checkbox" id="JSReplaceURL" name="JSReplaceURL" value="true" checked><label for="JSReplaceURL"> Replace Javascript // urls (may break some sites)</label><br><br><input type="checkbox" id="absoluteSite" name="absoluteSite" value="true"><label for="absoluteSite"> Set as absolute proxy site (required for some sites, changing the site after you turn on this mode can possibly leak your personal data)</label><br><br><input type="submit" value="Submit"><ul></ul>'
     if (errMsg && errMsg.trim()) {
         html += '<br><br><p style="color:red;">Error: '+errMsg+'</p>'
     }
     html += '</body></html>';
-    res.setHeader('content-length', html.length);
+    html = Buffer.from(html);
+    res.setHeader('content-length', html.byteLength);
     res.end(html)
 }
 
@@ -444,25 +446,21 @@ var server = http.createServer(async function(req, res) {
         changeHtml(req, res);
         return;
     }
-    var site2Proxy;
-    if (req.headers.cookie && req.headers.cookie.includes('proxySite=')) {
-        site2Proxy = decodeURIComponent(req.headers.cookie.split('proxySite=').pop().split(';')[0]);
+    var opts = {};
+    if (req.headers.cookie && req.headers.cookie.includes('proxySettings=')) {
+        opts.site2Proxy = decodeURIComponent(req.headers.cookie.split('proxySettings=').pop().split(';')[0].split('_')[0]);
+        opts.proxyJSReplace = (req.headers.cookie.split('proxySettings=').pop().split(';')[0].split('_')[1] === '1');
+        opts.isAbsoluteProxy = (req.headers.cookie.split('proxySettings=').pop().split(';')[0].split('_')[2] === '1');
     }
-    if (isAbsoluteProxy) {
-        site2Proxy = absoluteProxySite;
-    }
-    if (! site2Proxy) {
+    if (! opts.site2Proxy) {
         res.setHeader('location', '/changeSiteToServe');
         res.setHeader('content-length', 0);
         res.writeHead(307);
         res.end();
         return;
     }
-    var proxyJSReplace;
-    if (req.headers.cookie && req.headers.cookie.includes('proxyJSReplace=')) {
-        proxyJSReplace = (req.headers.cookie.split('proxyJSReplace=').pop().split(';')[0] === 'true');
-    } else {
-        proxyJSReplace = true;
+    if (!opts.proxyJSReplace) {
+        opts.proxyJSReplace = true;
     }
     if (req.url.startsWith('/http') && (req.url.substring(1).startsWith('https://'+req.headers.host) || req.url.substring(1).startsWith('https:/'+req.headers.host) || req.url.substring(1).startsWith('http://'+req.headers.host) || req.url.substring(1).startsWith('http:/'+req.headers.host))) {
         res.setHeader('location', req.url.split('/'+req.headers.host).pop().replaceAll('//', '/'));
@@ -470,7 +468,7 @@ var server = http.createServer(async function(req, res) {
         res.end();
         return;
     }
-    var url = req.url.startsWith('/http') ? req.url.substring(1) : site2Proxy+req.url;
+    var url = req.url.startsWith('/http') ? req.url.substring(1) : opts.site2Proxy+req.url;
     if (req.url.startsWith('/https') && req.url.startsWith('/https:/') && !req.url.startsWith('/https://')) {
         url = req.url.substring(1).replace('https:/', 'https://')
     }
@@ -495,10 +493,10 @@ var server = http.createServer(async function(req, res) {
     var vc = args.vc, nc = args.nc;
     var reqBody = await consumeBody(req);
     if (req.headers['content-type'] && req.headers['content-type'].includes('x-www-form-urlencoded')) {
-        reqBody = Buffer.from(parseTextFile(reqBody.toString(), false, true, site2Proxy, url, host, false));
+        reqBody = Buffer.from(parseTextFile(reqBody.toString(), false, true, opts.site2Proxy, url, host, false));
     }
     try {
-        var body = await fetch(req.method, url, req.headers, reqBody, site2Proxy, host);
+        var body = await fetch(req.method, url, req.headers, reqBody, opts, host);
     } catch(e) {
         console.log(e)
         res.writeHead(404);
@@ -517,16 +515,16 @@ var server = http.createServer(async function(req, res) {
             if (Array.isArray(body[3][k])) {
                 var cookies = [];
                 for (var i=0; i<body[3][k].length; i++) {
-                    cookies.push(parseSetCookie(body[3][k][i], hostname));
+                    cookies.push(parseSetCookie(body[3][k][i], hostname, opts.isAbsoluteProxy));
                 }
                 res.setHeader(k, cookies);
             } else {
-                res.setHeader(k, parseSetCookie(body[3][k], hostname));
+                res.setHeader(k, parseSetCookie(body[3][k], hostname, opts.isAbsoluteProxy));
             }
             continue;
         }
         if (typeof body[3][k] == 'string') {
-            res.setHeader(k, body[3][k].replaceAll(site2Proxy+'/', '/').replaceAll(site2Proxy, '').replaceAll('http', '/http'));
+            res.setHeader(k, body[3][k].replaceAll(opts.site2Proxy+'/', '/').replaceAll(opts.site2Proxy, '').replaceAll('http', '/http'));
         } else {
             res.setHeader(k, body[3][k]);
         }
@@ -549,14 +547,15 @@ var server = http.createServer(async function(req, res) {
         var mime = body[2];
         //javascript/html parsing
         if (!nc || (nc != '1' && nc != 'true')) {
-            body = parseTextFile(body[1], body[2].includes('html'), body[2].includes('x-www-form-urlencoded'), site2Proxy, url, host, proxyJSReplace);
+            body = parseTextFile(body[1], body[2].includes('html'), body[2].includes('x-www-form-urlencoded'), opts.site2Proxy, url, host, opts.proxyJSReplace);
         } else {
             body = body[1];
         }
-        if ((site2Proxy === 'https://www.instagram.com' || (isAbsoluteProxy && absoluteProxySite === 'https://www.instagram.com')) && mime.includes('javascript') && !url.includes('worker')) {
+        if (opts.site2Proxy === 'https://www.instagram.com' && mime.includes('javascript') && !url.includes('worker')) {
             body+='\nif (typeof window !== undefined && typeof document !== undefined && !window.checkInterval) {window.checkInterval=setInterval(function(){document.querySelectorAll("svg").forEach(e => {if (e.attributes["aria-label"]&&e.attributes["aria-label"].textContent) {e.innerHTML = e.attributes["aria-label"].textContent}})}, 200)}';
         }
-        res.setHeader('content-length', body.length);
+        body = Buffer.from(body);
+        res.setHeader('content-length', body.byteLength);
         res.writeHead(code || 200);
         res.end(body);
     } else {
@@ -592,6 +591,11 @@ server.on('upgrade', function(req, socket, head) {
     var newHeaders = {};
     var {hostname,pathname,search} = new URL('wss:/'+req.url);
     var headers = req.headers;
+    var opts = {};
+    if (req.headers.cookie && req.headers.cookie.includes('proxySettings=')) {
+        opts.site2Proxy = decodeURIComponent(req.headers.cookie.split('proxySettings=').pop().split(';')[0].split('_')[0]);
+        opts.isAbsoluteProxy = (req.headers.cookie.split('proxySettings=').pop().split(';')[0].split('_')[2] === '1');
+    }
     if (headers) {
         for (var k in headers) {
             if (k.startsWith('x-replit') || k === 'accept-encoding') {
@@ -601,10 +605,10 @@ server.on('upgrade', function(req, socket, head) {
                 var cookies = [];
                 var ck = headers[k].split(';');
                 for (var i=0; i<ck.length; i++) {
-                    if (ck[i].includes('proxySite') || ck[i].includes('proxyJSReplace')) {
+                    if (ck[i].includes('proxySettings')) {
                         continue;
                     }
-                    var a = parseResCookie(ck[i], hostname);
+                    var a = parseResCookie(ck[i], hostname, opts.isAbsoluteProxy);
                     if (a !== null) {
                         cookies.push(a[0]);
                         if (a[1] !== null) {
@@ -612,13 +616,11 @@ server.on('upgrade', function(req, socket, head) {
                         }
                     }
                 }
-                var cookie = '';
-                cookie = cookies.join('; ')
-                newHeaders[k] = cookie;
+                newHeaders[k] = cookies.join('; ');
                 continue;
             }
             if (headers[k].includes(hostname)) {
-                headers[k] = headers[k].replaceAll(headers[k].split('https://').pop().split('/')[0], site2Proxy.split('://').pop())
+                headers[k] = headers[k].replaceAll(headers[k].split('https://').pop().split('/')[0], opts.site2Proxy.split('://').pop())
             }
             newHeaders[k] = headers[k];
         }
@@ -626,11 +628,8 @@ server.on('upgrade', function(req, socket, head) {
     newHeaders['host'] = hostname;
     var outgoing = {};
     var origin = '';
-    if (req.headers.cookie.includes('proxySite=')) {
-        origin = 'https://'+req.headers.cookie.split('proxySite=').pop().split(';')[0];
-    }
-    if (isAbsoluteProxy) {
-        origin = absoluteProxySite;
+    if (req.headers.cookie && req.headers.cookie.includes('proxySettings=')) {
+        origin = opts.site2Proxy;
     }
     newHeaders['origin'] = origin;
     var proxyReq = https.request('https:/'+req.url);
