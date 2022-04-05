@@ -1,4 +1,3 @@
-
 const https = require('https');
 const http = require('http');
 const torrentStream = require('torrent-stream');
@@ -13,10 +12,6 @@ const {
     getConcurentFiles
 } = require("./utils.js");
 const debug = false;
-
-//todo
-// next/back button on torrent stream page
-// iframe other torrent file types?
 
 let port = 3000;
 const sites = [ //no '/' at end
