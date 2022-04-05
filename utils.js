@@ -87,7 +87,10 @@ module.exports = {
             });
             for (var i=0; i<a.length; i++) {
                 if (a[i].children.length > 0) {
-                    return processFiles(a[i].children);
+                    var a = processFiles(a[i].children);
+                    if (a) {
+                        return a;
+                    }
                 } else if (a[i].fullPath === currentFile) {
                     var out = [];
                     if (a[i+1]) {
