@@ -65,6 +65,47 @@ module.exports = {
             }).on('error', reject);
         })
     },
+    getConcurentFiles: function(currentFile, files, magnet) {
+        var paths = [];
+        for (var i=0; i<files.length; i++) {
+            paths.push(files[i].path);
+        }
+        var result = [];
+        var level = {result};
+        paths.forEach(path => {
+            path.split('/').reduce((r, name, i, a) => {
+                if(!r[name]) {
+                    r[name] = {result: []};
+                    r.result.push({name, children: r[name].result, fullPath:path})
+                }
+                return r[name];
+            }, level)
+        })
+        function processFiles(a) {
+            a = a.sort(function(a, b) {
+                return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+            });
+            for (var i=0; i<a.length; i++) {
+                if (a[i].children.length > 0) {
+                    return processFiles(a[i].children);
+                } else if (a[i].fullPath === currentFile) {
+                    var out = [];
+                    if (a[i+1]) {
+                        out[1] = '/torrentStream?fileName='+encodeURIComponent(a[i+1].fullPath)+'&stage=step2&stream=on&fetchFile=no&magnet='+magnet;
+                    } else {
+                        out[1] = null;
+                    }
+                    if (a[i-1]) {
+                        out[0] = '/torrentStream?fileName='+encodeURIComponent(a[i-1].fullPath)+'&stage=step2&stream=on&fetchFile=no&magnet='+magnet;
+                    } else {
+                        out[0] = null;
+                    }
+                    return out;
+                }
+            }
+        }
+        return processFiles(result)
+    },
     generateTorrentTree: function(files, magnet) {
         var paths = [];
         for (var i=0; i<files.length; i++) {
@@ -88,20 +129,18 @@ module.exports = {
             });
             for (var i=0; i<a.length; i++) {
                 if (a[i].children.length > 0) {
-                    out += '<li>';
-                    out += '<span class="caret">'+a[i].name+'</span>';
-                    out += '<ul class="nested">';
+                    out += '<li><span class="caret">'+a[i].name+'</span><ul class="nested">';
                     processFiles(a[i].children);
                     out += '</ul></li>'
                 } else {
                     var downloadUrl = '/torrentStream?fileName='+encodeURIComponent(a[i].fullPath)+'&stage=step2&stream=on&fetchFile=no&magnet='+magnet;
-                    out += '<li><a style="text-decoration:none" href="'+downloadUrl+'">'+a[i].name+'</a></li>';
+                    var downloadUrl2 = '/torrentStream?fileName='+encodeURIComponent(a[i].fullPath)+'&stage=step2&magnet='+magnet;
+                    out += '<li><a style="text-decoration:none" href="'+downloadUrl+'">'+a[i].name+'</a> - <a style="text-decoration:none" href="'+downloadUrl2+'">download</a></li>';
                 }
             }
         }
         processFiles(result);
-        out += '</ul>';
-        out += '<script>for(var toggler=document.getElementsByClassName("caret"),i=0;i<toggler.length;i++)toggler[i].addEventListener("click",function(){this.parentElement.querySelector(".nested").classList.toggle("active"),this.classList.toggle("caret-down")});</script>';
+        out += '</ul><script>for(var toggler=document.getElementsByClassName("caret"),i=0;i<toggler.length;i++)toggler[i].addEventListener("click",function(){this.parentElement.querySelector(".nested").classList.toggle("active"),this.classList.toggle("caret-down")});</script>';
         return out;
     }
 }

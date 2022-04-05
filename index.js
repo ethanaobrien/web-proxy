@@ -9,7 +9,8 @@ const {
     transformArgs,
     removeArg,
     check4Redirects,
-    generateTorrentTree
+    generateTorrentTree,
+    getConcurentFiles
 } = require("./utils.js");
 const debug = false;
 
@@ -289,11 +290,11 @@ function torrent(req, res) {
                 return;
             }
             var ct = MIMETYPES[file.name.split('.').pop()].split('/')[0];
-            if (args.stream === 'on' && args.fetchFile === 'no' && ['audio', 'video', 'image'].includes(ct)) {
+            if (args.stream === 'on' && args.fetchFile === 'no') {
                 var downloadUrl = '/torrentStream?fileName='+encodeURIComponent(file.path)+'&stage=step2&stream=on&magnet='+magnet;
-                var tagName = ['video', 'audio'].includes(ct) ? ct : 'img';
-                res.setHeader('content-type', MIMETYPES.html+' chartset=utf-8');
-                var html = '<html><head><title>'+file.name+'</title></head><body><br><br><br><center>';
+                var tagName = ['video', 'audio'].includes(ct) ? ct : ('image' === ct ? 'img' : 'iframe');
+                res.setHeader('content-type', 'text/html; chartset=utf-8');
+                var html = '<html><style>.nb{text-decoration:none;display:inline-block;padding:8px 16px;border-radius:12px;transition:0.35s;color:black;}.previous{background-color:#00b512;}.previous:hover{background-color:#ee00ff;}.next{background-color:#ffa600;}.next:hover{background-color:#0099ff;}</style><head><title>'+file.name+'</title></head><body><br><br><br><center>';
                 html += ('<'+tagName);
                 if (['video', 'image'].includes(ct)) {
                     html += ' height="75%"';
@@ -301,13 +302,27 @@ function torrent(req, res) {
                 if (['video', 'audio'].includes(ct)) {
                     html += ' controls preload=auto';
                 }
+                if (!['video', 'audio', 'image'].includes(ct)) {
+                    html += ' frameBorder="0" height="75%"';
+                }
                 html += ' id="element" src="'+downloadUrl+'"></'+tagName+'>';
                 if (['video', 'audio'].includes(ct)) {
                     html += '<script>var element = document.getElementById("element");var err=0;function err(e){if(err>25){return};err++;var a=element.src;element.src=a;element.play()};element.addEventListener("abort", err);element.addEventListener("error", err);element.play();</script>';
                 }
-                html += '<br><h2>'+file.name+'</h2></center><br><br>';
+                html += '<h2>'+file.name+'</h2><br>';
+                var nb = getConcurentFiles(file.path, files, magnet);
+                if (nb[0]) {
+                    html += '<a href="'+nb[0]+'" class="previous nb">&laquo; Previous</a>';
+                }
+                if (nb[0] && nb[1]) {
+                    html += ' ';
+                }
+                if (nb[1]) {
+                    html += '<a href="'+nb[1]+'" class="next nb">Next &raquo;</a>';
+                }
+                html += '</center><br><ul>';
                 html += generateTorrentTree(files, magnet);
-                html += '<br><br></body></html>';
+                html += '</ul><br><br></body></html>';
                 html = Buffer.concat([Buffer.from(new Uint8Array([0xEF,0xBB,0xBF])), Buffer.from(html)]);
                 res.setHeader('content-length', html.byteLength);
                 res.writeHead(200);
