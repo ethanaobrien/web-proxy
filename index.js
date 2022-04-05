@@ -503,7 +503,7 @@ var server = http.createServer(async function(req, res) {
         url = removeArg(url, 'nc');
     }
     if (args.video) {
-        url = removeArg(url, 'nc');
+        url = removeArg(url, 'video');
     }
     url=url.replaceAll('https%3A%2F%2F%2F', '');
     url=url.replaceAll('https%3A%2F'+req.headers.host, 'https%3A%2F%2F'+req.headers.host);
