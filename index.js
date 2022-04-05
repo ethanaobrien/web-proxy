@@ -26,7 +26,8 @@ const sites = [ //no '/' at end
     ['https://github.com', false, 'github'],
     ['https://emulatorjs.ga', false, 'emulatorjs'],
     ['https://www.instagram.com', true, 'instagram'],
-    ['https://www1.thepiratebay3.to', false, 'the pirate bay']
+    ['https://www1.thepiratebay3.to', false, 'the pirate bay'],
+    ['https://9anime.me', true, '9anime']
 ]
 
 function parseSetCookie(cookie, hostname, isAbsoluteProxy) {
@@ -476,6 +477,7 @@ var server = http.createServer(async function(req, res) {
     }
     if (req.url.startsWith('/http') && (req.url.substring(1).startsWith('https://'+req.headers.host) || req.url.substring(1).startsWith('https:/'+req.headers.host) || req.url.substring(1).startsWith('http://'+req.headers.host) || req.url.substring(1).startsWith('http:/'+req.headers.host))) {
         res.setHeader('location', req.url.split('/'+req.headers.host).pop().replaceAll('//', '/'));
+        res.setHeader('content-length', 0);
         res.writeHead(301);
         res.end();
         return;
@@ -500,6 +502,9 @@ var server = http.createServer(async function(req, res) {
     if (args.nc) {
         url = removeArg(url, 'nc');
     }
+    if (args.video) {
+        url = removeArg(url, 'nc');
+    }
     url=url.replaceAll('https%3A%2F%2F%2F', '');
     url=url.replaceAll('https%3A%2F'+req.headers.host, 'https%3A%2F%2F'+req.headers.host);
     var vc = args.vc, nc = args.nc;
@@ -513,6 +518,13 @@ var server = http.createServer(async function(req, res) {
         console.log(e)
         res.writeHead(404);
         res.end('error');
+        return;
+    }
+    if (['1', 'true'].includes(args.video) && body[0] === true && body[1].includes('setVideoUrlHigh(\'')) {
+        res.setHeader('location', body.split('setVideoUrlHigh(\'').pop().split("'")[0]);
+        res.setHeader('content-length', 0);
+        res.writeHead(307);
+        res.end();
         return;
     }
     for (var k in body[3]) {
@@ -534,6 +546,9 @@ var server = http.createServer(async function(req, res) {
                 res.setHeader(k, parseSetCookie(body[3][k], hostname, opts.isAbsoluteProxy));
             }
             continue;
+        }
+        if (body[3][k].startsWith('//')) {
+            body[3][k] = body[3][k].replaceAll('//', 'https://');
         }
         if (typeof body[3][k] == 'string') {
             res.setHeader(k, body[3][k].replaceAll(opts.site2Proxy+'/', '/').replaceAll(opts.site2Proxy, '').replaceAll('http', '/http'));
