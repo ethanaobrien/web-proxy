@@ -521,8 +521,7 @@ var server = http.createServer(async function(req, res) {
         return;
     }
     if (['1', 'true'].includes(args.video) && body[0] === true && body[1].includes('setVideoUrlHigh(\'')) {
-        console.log(body[1].split('setVideoUrlHigh(\'').pop().split("'")[0]);
-        res.setHeader('location', body[1].split('setVideoUrlHigh(\'').pop().split("'")[0]);
+        res.setHeader('location', '/'+body[1].split('setVideoUrlHigh(\'').pop().split("'")[0]);
         res.setHeader('content-length', 0);
         res.writeHead(307);
         res.end();
