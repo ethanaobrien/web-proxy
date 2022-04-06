@@ -27,7 +27,8 @@ const sites = [ //no '/' at end
     ['https://emulatorjs.ga', false, 'emulatorjs'],
     ['https://www.instagram.com', true, 'instagram'],
     ['https://www1.thepiratebay3.to', false, 'the pirate bay'],
-    ['https://9anime.me', true, '9anime']
+    ['https://9anime.to', true, '9anime'],
+    ['https://www.webtoons.com', false, 'webtoons']
 ]
 
 function parseSetCookie(cookie, hostname, isAbsoluteProxy) {
@@ -269,7 +270,10 @@ function torrent(req, res) {
             engine.destroy();
             res.setHeader('content-type', 'text/html; chartset=utf-8')
             res.writeHead(200);
-            res.end(Buffer.concat([Buffer.from(new Uint8Array([0xEF,0xBB,0xBF])), Buffer.from(html)]));
+            html = Buffer.concat([Buffer.from(new Uint8Array([0xEF,0xBB,0xBF])), Buffer.from(html)]);
+            res.setHeader('content-length', html.byteLength);
+            res.writeHead(200);
+            res.end(html);
         } else if (stage === 'step2') {
             var fileName = args.fileName;
             var file;
@@ -303,7 +307,7 @@ function torrent(req, res) {
                 }
                 html += ' id="element" src="'+downloadUrl+'"></'+tagName+'>';
                 if (['video', 'audio'].includes(ct)) {
-                    html += '<script>var element = document.getElementById("element");var err=0;function err(e){if(err>25){return};err++;var a=element.src;element.src=a;element.play()};element.addEventListener("abort", err);element.addEventListener("error", err);element.play();</script>';
+                    html += '<script>var element = document.getElementById("element");var errCt=0;function err(e){if(errCt>25){return};errCt++;var a=element.src;element.src=a;element.play()};element.addEventListener("abort", err);element.addEventListener("error", err);element.play();</script>';
                 }
                 html += '<h2>'+file.name+'</h2><br>';
                 var nb = getConcurentFiles(file.path, files, magnet);

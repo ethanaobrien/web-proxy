@@ -54,11 +54,18 @@ module.exports = {
         return new Promise(function(resolve, reject) {
             var protReq = url.startsWith('https:') ? https : http;
             protReq.get(url, function(res) {
-                var {statusCode} = res;
-                if ([301, 302, 307].includes(statusCode) && res.headers['location'] && false) {
-                    res.resume();
-                    resolve(res.headers['location']);
-                } else {
+                try {
+                    var {statusCode} = res;
+                    if ([301, 302, 307].includes(statusCode) &&
+                        res.headers['location'] &&
+                        (new URL(res.headers['location'])).pathname === '/') {
+                        res.resume();
+                        resolve(res.headers['location']);
+                    } else {
+                        res.resume();
+                        resolve(false);
+                    }
+                } catch(e) {
                     res.resume();
                     resolve(false);
                 }
