@@ -417,7 +417,7 @@ async function changeHtml(req, res) {
             res.end('Message for site owner: Invalid absolute url');
             return;
         }
-        res.setHeader('set-cookie', 'proxySettings='+encodeURIComponent(site)+'_1_1; Max-Age=2592000; HttpOnly');
+        res.setHeader('set-cookie', 'proxySettings='+encodeURIComponent(site)+'_1_1_0; Max-Age=2592000; HttpOnly');
         res.setHeader('location', path2Redir2 || '/');
         res.setHeader('content-length', 0);
         res.writeHead(307);
@@ -457,7 +457,7 @@ async function changeHtml(req, res) {
                 }
             }
             if (!error) {
-                res.setHeader('set-cookie', 'proxySettings='+(args.custom?encodeURIComponent(args.custom):args.site)+'_'+(args.JSReplaceURL?'1':'0')+'_'+(args.absoluteSite?'1':'0')+'; Max-Age=2592000; HttpOnly');
+                res.setHeader('set-cookie', 'proxySettings='+(args.custom?encodeURIComponent(args.custom):args.site)+'_'+(args.JSReplaceURL?'1':'0')+'_'+(args.absoluteSite?'1':'0')+'_'+(args.hidden?'1':'0')+'; Max-Age=2592000; HttpOnly');
                 res.setHeader('location', path2Redir2 || '/');
                 res.setHeader('content-length', 0);
                 res.writeHead(307);
@@ -472,7 +472,7 @@ async function changeHtml(req, res) {
     for (var i=0; i<sites.length; i++) {
         html += '<input type="radio" id="'+encodeURIComponent(sites[i][0])+'" name="site" value="'+encodeURIComponent(sites[i][0])+'"><label for="'+encodeURIComponent(sites[i][0])+'">'+sites[i][2]+(sites[i][1]?' (buggy)':'')+'</label><br>';
     }
-    html += '<br><label for="custom">Custom URL</label><input type="text" id="custom" name="custom"><br><br><input type="checkbox" id="JSReplaceURL" name="JSReplaceURL" value="true" checked><label for="JSReplaceURL"> Replace Javascript // urls (may break some sites)</label><br><br><input type="checkbox" id="absoluteSite" name="absoluteSite" value="true"><label for="absoluteSite"> Set as absolute proxy site (required for some sites, recommended to clear your cookies before enabling)</label><br><br><input type="submit" value="Submit"><ul></ul>'
+    html += '<br><label for="custom">Custom URL</label><input type="text" id="custom" name="custom"><br><br><input type="checkbox" id="JSReplaceURL" name="JSReplaceURL" value="true" checked><label for="JSReplaceURL"> Replace Javascript // urls (may break some sites)</label><br><br><input type="checkbox" id="absoluteSite" name="absoluteSite" value="true"><label for="absoluteSite"> Set as absolute proxy site (required for some sites, recommended to clear your cookies before enabling)</label><br><br><input type="checkbox" id="hidden" name="hidden" value="true"><label for="hidden"> Hide page title/url from search history (will appear as google classroom)</label><br><br><input type="submit" value="Submit"><ul></ul>'
     if (errMsg && errMsg.trim()) {
         html += '<br><br><p style="color:red;">Error: '+errMsg+'</p>'
     }
@@ -480,6 +480,14 @@ async function changeHtml(req, res) {
     html = Buffer.from(html);
     res.setHeader('content-length', html.byteLength);
     res.end(html)
+}
+
+function hideTitle(req, res, opts) {
+    var html = '<html><head><link rel="icon" type="image/png" href="/https:/ssl.gstatic.com/classroom/favicon.png"><title>Classes</title><meta name="viewport" content="width=device-width, initial-scale=1"><style>*{padding:0;margin:0;}iframe{margin:0 auto;}</style></head><body><iframe width=99% height=99% frameBoarder=0 src="/"></iframe></body></html>';
+    html = Buffer.from(html);
+    res.setHeader('content-length', html.byteLength);
+    res.setHeader('content-type', 'text/html; chartset=utf-8');
+    res.end(html);
 }
 
 var server = http.createServer(async function(req, res) {
@@ -497,9 +505,21 @@ var server = http.createServer(async function(req, res) {
         opts.site2Proxy = decodeURIComponent(req.headers.cookie.split('proxySettings=').pop().split(';')[0].split('_')[0]);
         opts.proxyJSReplace = (req.headers.cookie.split('proxySettings=').pop().split(';')[0].split('_')[1] === '1');
         opts.isAbsoluteProxy = (req.headers.cookie.split('proxySettings=').pop().split(';')[0].split('_')[2] === '1');
+        opts.useHiddenPage = (req.headers.cookie.split('proxySettings=').pop().split(';')[0].split('_')[3] === '1');
     }
     if (! opts.site2Proxy) {
         res.setHeader('location', '/changeSiteToServe');
+        res.setHeader('content-length', 0);
+        res.writeHead(307);
+        res.end();
+        return;
+    }
+    if (req.url.split('?')[0] === '/hideTitle') {
+        hideTitle(req, res, opts);
+        return
+    }
+    if (req.url === '/' && opts.useHiddenPage && req.headers['sec-fetch-dest'] !== 'iframe') {
+        res.setHeader('location', '/hideTitle');
         res.setHeader('content-length', 0);
         res.writeHead(307);
         res.end();
@@ -561,10 +581,7 @@ var server = http.createServer(async function(req, res) {
         return;
     }
     for (var k in body[3]) {
-        if (['content-security-policy'].includes(k) || (k === 'content-length' && body[0] === true)) {
-            continue
-        }
-        if (k === 'content-encoding') {
+        if (['content-security-policy', 'content-encoding'].includes(k) || (k === 'content-length' && body[0] === true)) {
             continue
         }
         if (k === 'set-cookie') {
@@ -589,6 +606,7 @@ var server = http.createServer(async function(req, res) {
             res.setHeader(k, body[3][k]);
         }
     }
+    res.setHeader('x-frame-options', 'SAMEORIGIN');
     if (vc == 'true' || vc == '1' || nc == 'true' || nc == '1') {
         res.setHeader('content-type', 'text/plain');
     }
