@@ -12,6 +12,9 @@ const {
     getConcurentFiles
 } = require("./utils.js");
 const debug = false;
+//if you want to force a site to proxy, put url here
+//leave empty if not. Will set the client to absolute proxy mode
+const forceSite = '';
 
 let port = 3000;
 const sites = [ //no '/' at end
@@ -395,6 +398,32 @@ function torrent(req, res) {
 
 async function changeHtml(req, res) {
     var errMsg = '';
+    if (typeof forceSite !== undefined &&
+        typeof forceSite == 'string' &&
+        forceSite.trim() !== '') {
+        var site = forceSite;
+        try {
+            var b;
+            while (b = await check4Redirects(site)) {
+                site = b;
+            }
+            var newURL = new URL('/', site);
+            newURL = newURL.toString();
+            if (newURL.endsWith('/')) {
+                newURL = newURL.substring(0, newURL.length-1);
+            }
+            site = newURL;
+        } catch(e) {
+            res.end('Message for site owner: Invalid absolute url');
+            return;
+        }
+        res.setHeader('set-cookie', 'proxySettings='+encodeURIComponent(site)+'_1_1; Max-Age=2592000; HttpOnly');
+        res.setHeader('location', path2Redir2 || '/');
+        res.setHeader('content-length', 0);
+        res.writeHead(307);
+        res.end();
+        return;
+    }
     if (req.url.includes('?')) {
         var args = transformArgs(req.url);
         if (args.site || args.custom) {
@@ -443,7 +472,7 @@ async function changeHtml(req, res) {
     for (var i=0; i<sites.length; i++) {
         html += '<input type="radio" id="'+encodeURIComponent(sites[i][0])+'" name="site" value="'+encodeURIComponent(sites[i][0])+'"><label for="'+encodeURIComponent(sites[i][0])+'">'+sites[i][2]+(sites[i][1]?' (buggy)':'')+'</label><br>';
     }
-    html += '<br><label for="custom">Custom URL</label><input type="text" id="custom" name="custom"><br><br><input type="checkbox" id="JSReplaceURL" name="JSReplaceURL" value="true" checked><label for="JSReplaceURL"> Replace Javascript // urls (may break some sites)</label><br><br><input type="checkbox" id="absoluteSite" name="absoluteSite" value="true"><label for="absoluteSite"> Set as absolute proxy site (required for some sites, changing the site after you turn on this mode can possibly leak your personal data)</label><br><br><input type="submit" value="Submit"><ul></ul>'
+    html += '<br><label for="custom">Custom URL</label><input type="text" id="custom" name="custom"><br><br><input type="checkbox" id="JSReplaceURL" name="JSReplaceURL" value="true" checked><label for="JSReplaceURL"> Replace Javascript // urls (may break some sites)</label><br><br><input type="checkbox" id="absoluteSite" name="absoluteSite" value="true"><label for="absoluteSite"> Set as absolute proxy site (required for some sites, recommended to clear your cookies before enabling)</label><br><br><input type="submit" value="Submit"><ul></ul>'
     if (errMsg && errMsg.trim()) {
         html += '<br><br><p style="color:red;">Error: '+errMsg+'</p>'
     }
@@ -561,7 +590,7 @@ var server = http.createServer(async function(req, res) {
         }
     }
     if (vc == 'true' || vc == '1' || nc == 'true' || nc == '1') {
-        res.setHeader('content-type', 'text/plain')
+        res.setHeader('content-type', 'text/plain');
     }
     if (body[5].length > 0) {
         var a = res.getHeader('set-cookie');
