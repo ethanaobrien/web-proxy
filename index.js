@@ -72,7 +72,7 @@ function fetch(method, url, headers, body, opts, reqHost) {
         var {hostname} = new URL(url);
         if (headers) {
             for (var k in headers) {
-                if (k.startsWith('x-replit') || k === 'accept-encoding') {
+                if (k.startsWith('x-replit') || k === 'accept-encoding' || k.startsWith('sec-')) {
                     continue;
                 }
                 if (k === 'cookie') {
