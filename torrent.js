@@ -25,8 +25,7 @@ module.exports = function(req, res) {
             var downloadUrl2 = '/torrentStream?stage=dlAsZip&magnet='+magnet;
             html += '<br><a style="text-decoration:none" href="'+downloadUrl2+'">Download All As Zip</a></ul><br></body></html>';
             engine.destroy();
-            res.setHeader('content-type', 'text/html; chartset=utf-8')
-            res.writeHead(200);
+            res.setHeader('content-type', 'text/html; chartset=utf-8');
             html = bodyBuffer(html);
             res.setHeader('content-length', html.byteLength);
             res.writeHead(200);
