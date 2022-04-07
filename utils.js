@@ -44,7 +44,7 @@ module.exports = {
         return args;
     },
     removeArg: function(url, argName) {
-        if (! url.split('?').pop().includes(argName)) {
+        if (! url.split('?').pop().includes(argName+'=')) {
             return url;
         }
         var a = url.split(argName).pop().split('&')[0];
@@ -152,5 +152,14 @@ module.exports = {
         processFiles(result);
         out += '</ul><script>for(var toggler=document.getElementsByClassName("caret"),i=0;i<toggler.length;i++)toggler[i].addEventListener("click",function(){this.parentElement.querySelector(".nested").classList.toggle("active"),this.classList.toggle("caret-down")});</script>';
         return out;
+    },
+    bodyBuffer: function(body) {
+        return Buffer.concat([Buffer.from(new Uint8Array([0xEF,0xBB,0xBF])), Buffer.from(body)]);
+    },
+    isNotGoodSite: function(url) {
+        if (url.includes('porn') || url.includes('xvideos') || url.includes('sex')) {
+            return true;
+        }
+        return false;
     }
 }

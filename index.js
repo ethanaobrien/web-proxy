@@ -9,7 +9,9 @@ const {
     removeArg,
     check4Redirects,
     generateTorrentTree,
-    getConcurentFiles
+    getConcurentFiles,
+    bodyBuffer,
+    isNotGoodSite
 } = require("./utils.js");
 const debug = false;
 //if you want to force a site to proxy, put url here
@@ -125,34 +127,51 @@ function fetch(method, url, headers, body, opts, reqHost) {
         req.on('error', function(e) {
             reject(e);
         })
-        req.write(body)
+        if (body && body.byteLength > 0) {
+            req.write(body)
+        }
         req.end()
     })
 }
 
-function parseTextFile(body, isHtml, isUrlEncoded, site2Proxy, url, reqHost, proxyJSReplace) {
+function parseTextFile(body, isHtml, isUrlEncoded, opts, url, reqHost, proxyJSReplace) {
+    //todo - replace style urls
+    var {site2Proxy,replaceExternalUrls} = opts;
     var date = new Date();
     var origBody = body;
+    var {hostname} = new URL(url);
+    var hn2 = hostname;
     var {hostname} = new URL(site2Proxy);
+    var startWithSite = ((new URL(url)).hostname !== hostname);
+    var startUrl = '';
+    if (startWithSite) {
+        startUrl = (new URL('/', url)).toString();
+        startUrl = startUrl.substring(0, startUrl.length-1);
+    }
     body = body
-        .replaceAll('"'+site2Proxy+'/', '"/')
-        .replaceAll("'"+site2Proxy+'/', '\'/')
-        .replaceAll("'"+site2Proxy, '\'')
-        .replaceAll('"'+site2Proxy, '"')
+        .replaceAll('"'+site2Proxy+'/', '"'+startUrl+'/')
+        .replaceAll("'"+site2Proxy+'/', '\''+startUrl+'/')
+        .replaceAll("'"+site2Proxy, '\''+startUrl+'')
+        .replaceAll('"'+site2Proxy, '"'+startUrl)
         .replaceAll("'"+site2Proxy.replaceAll('\\/', '/')+'/', '\'/')
         .replaceAll('"'+site2Proxy.replaceAll('\\/', '/')+'/', '"/')
         .replaceAll("'"+site2Proxy.replaceAll('\\/', '/'), '\'')
         .replaceAll('"'+site2Proxy.replaceAll('\\/', '/'), '"')
         .replaceAll("'"+hostname, "'"+reqHost)
         .replaceAll('"'+hostname, '"'+reqHost)
+        .replaceAll("'"+hn2, "'"+reqHost)
+        .replaceAll('"'+hn2, '"'+reqHost)
         .replaceAll('discord', 'discordddd')
         .replaceAll('wss://', 'wss://'+reqHost+'/')
     if (isHtml) {
         body = body.replaceAll('integrity=', 'sadfghj=').replaceAll('magnet:?', '/torrentStream?stage=step1&magnet=');
         var a = body.split('src');
         for (var i=1; i<a.length; i++) {
-            if (a[i].replaceAll(' ', '').replaceAll('"', '').replaceAll("'", '').startsWith('=//')) {
+            if (a[i].replaceAll(' ', '').replaceAll('"', '').replaceAll("'", '').trim().startsWith('=//')) {
                 a[i] = a[i].replace('//', 'https://');
+            }
+            if (startUrl && a[i].replaceAll('=', '').replaceAll('"', '').replaceAll("'", '').trim().startsWith('/')) {
+                a[i] = a[i].replace('/', startUrl+'/');
             }
         }
         body = a.join('src');
@@ -179,13 +198,16 @@ function parseTextFile(body, isHtml, isUrlEncoded, site2Proxy, url, reqHost, pro
         body = a.join('http');
         var a = body.split('href');
         for (var i=1; i<a.length; i++) {
-            if (a[i-1].split('<').pop().split(' ')[0] === 'a') {
+            if (startUrl && a[i].replaceAll('=', '').replaceAll('"', '').replaceAll("'", '').trim().startsWith('/') && !(a[i].replaceAll('=', '').replaceAll('"', '').replaceAll("'", '').trim().startsWith('//'))) {
+                a[i] = a[i].replace('/', '/'+startUrl+'/');
+            }
+            if (a[i-1].split('<').pop().split(' ')[0] === 'a' && !replaceExternalUrls) {
                 continue;
             }
-            if (a[i].replaceAll('=', '').replaceAll('"', '').replaceAll("'", '').startsWith('//')) {
+            if (a[i].replaceAll('=', '').replaceAll('"', '').replaceAll("'", '').trim().startsWith('//')) {
                 a[i] = a[i].replace('//', 'https://');
             }
-            if (a[i].replaceAll('=', '').replaceAll('"', '').replaceAll("'", '').startsWith('http')) {
+            if (a[i].replaceAll('=', '').replaceAll('"', '').replaceAll("'", '').trim().startsWith('http')) {
                 a[i] = a[i].replace('http', '/http');
             }
         }
@@ -226,8 +248,8 @@ function parseTextFile(body, isHtml, isUrlEncoded, site2Proxy, url, reqHost, pro
         if (proxyJSReplace) {
             var a = body.split('//');
             for (var i=1; i<a.length; i++) {
-                if ((a[i-1].endsWith('"') || a[i-1].endsWith("'")) &&
-                    (a[i].split('\n')[0].includes('"') || a[i].split('\n')[0].includes("'"))) {
+                if ((a[i-1].endsWith('"') && !a[i].split('"')[0].includes(' ')) ||
+                    (a[i-1].endsWith("'") && !a[i].split("'")[0].includes(' '))) {
                     a[i-1]+='https:';
                 }
             }
@@ -265,7 +287,7 @@ function torrent(req, res) {
         var files = engine.files;
         var torrentName = engine.torrent.name;
         if (stage === 'step1') {
-            var html = '<html><head><title>Download</title></head><body><br><ul><h1>Download</h1><br>';
+            var html = '<html><head><meta name="viewport" content="width=device-width, initial-scale=1"><title>Download</title></head><body><br><ul><h1>Download</h1><br>';
             html += generateTorrentTree(files, magnet);
             html += '<br>'
             var downloadUrl2 = '/torrentStream?stage=dlAsZip&magnet='+magnet;
@@ -273,7 +295,7 @@ function torrent(req, res) {
             engine.destroy();
             res.setHeader('content-type', 'text/html; chartset=utf-8')
             res.writeHead(200);
-            html = Buffer.concat([Buffer.from(new Uint8Array([0xEF,0xBB,0xBF])), Buffer.from(html)]);
+            html = bodyBuffer(html);
             res.setHeader('content-length', html.byteLength);
             res.writeHead(200);
             res.end(html);
@@ -297,7 +319,7 @@ function torrent(req, res) {
                 var downloadUrl = '/torrentStream?fileName='+encodeURIComponent(file.path)+'&stage=step2&stream=on&magnet='+magnet;
                 var tagName = ['video', 'audio'].includes(ct) ? ct : ('image' === ct ? 'img' : 'iframe');
                 res.setHeader('content-type', 'text/html; chartset=utf-8');
-                var html = '<html><style>.nb{text-decoration:none;display:inline-block;padding:8px 16px;border-radius:12px;transition:0.35s;color:black;}.previous{background-color:#00b512;}.previous:hover{background-color:#ee00ff;}.next{background-color:#ffa600;}.next:hover{background-color:#0099ff;}</style><head><title>'+file.name+'</title></head><body><br><br><br><center>';
+                var html = '<html><head><style>.nb{text-decoration:none;display:inline-block;padding:8px 16px;border-radius:12px;transition:0.35s;color:black;}.previous{background-color:#00b512;}.previous:hover{background-color:#ee00ff;}.next{background-color:#ffa600;}.next:hover{background-color:#0099ff;}</style><meta name="viewport" content="width=device-width, initial-scale=1"><title>'+file.name+'</title></head><body><br><br><br><center>';
                 html += ('<'+tagName);
                 if (['video', 'image'].includes(ct)) {
                     html += ' height="75%"';
@@ -328,7 +350,7 @@ function torrent(req, res) {
                 html += '</center><br><ul>';
                 html += generateTorrentTree(files, magnet);
                 html += '</ul><br><br></body></html>';
-                html = Buffer.concat([Buffer.from(new Uint8Array([0xEF,0xBB,0xBF])), Buffer.from(html)]);
+                html = bodyBuffer(html);
                 res.setHeader('content-length', html.byteLength);
                 res.writeHead(200);
                 res.end(html);
@@ -397,7 +419,7 @@ function torrent(req, res) {
 }
 
 async function changeHtml(req, res) {
-    var errMsg = '';
+    var errMsg = '', adultContent = false;
     if (typeof forceSite !== undefined &&
         typeof forceSite == 'string' &&
         forceSite.trim() !== '') {
@@ -417,7 +439,7 @@ async function changeHtml(req, res) {
             res.end('Message for site owner: Invalid absolute url');
             return;
         }
-        res.setHeader('set-cookie', 'proxySettings='+encodeURIComponent(site)+'_1_1_0; Max-Age=2592000; HttpOnly');
+        res.setHeader('set-cookie', 'proxySettings='+encodeURIComponent(site)+'_1_1_0_0; Max-Age=2592000; HttpOnly');
         res.setHeader('location', path2Redir2 || '/');
         res.setHeader('content-length', 0);
         res.writeHead(307);
@@ -426,7 +448,7 @@ async function changeHtml(req, res) {
     }
     if (req.url.includes('?')) {
         var args = transformArgs(req.url);
-        if (args.site || args.custom) {
+        if ((args.site || args.custom)) {
             var error = false;
             var path2Redir2 = '/';
             if (args.custom) {
@@ -443,6 +465,9 @@ async function changeHtml(req, res) {
                         args.custom = b;
                     }
                     var a = new URL(args.custom);
+                    if (a.hostname.includes('127.0') || a.hostname.includes('192.168')) {
+                        throw new Error('Cannot use local url');
+                    }
                     path2Redir2 = a.pathname+a.search;
                     var newURL = new URL('/', args.custom);
                     newURL = newURL.toString();
@@ -456,38 +481,84 @@ async function changeHtml(req, res) {
                     errMsg = 'invalid URL';
                 }
             }
+            if (!args.confirmation && isNotGoodSite(args.custom?args.custom:decodeURIComponent(args.site))) {
+                error = true;
+                adultContent = true;
+            }
             if (!error) {
-                res.setHeader('set-cookie', 'proxySettings='+(args.custom?encodeURIComponent(args.custom):args.site)+'_'+(args.JSReplaceURL?'1':'0')+'_'+(args.absoluteSite?'1':'0')+'_'+(args.hidden?'1':'0')+'; Max-Age=2592000; HttpOnly');
-                res.setHeader('location', path2Redir2 || '/');
-                res.setHeader('content-length', 0);
-                res.writeHead(307);
-                res.end();
+                res.setHeader('set-cookie', 'proxySettings='+(args.custom?encodeURIComponent(args.custom):args.site)+'_'+(args.JSReplaceURL?'1':'0')+'_'+(args.absoluteSite?'1':'0')+'_'+(args.hidden?'1':'0')+'_'+(args.replaceExternal?'1':'0')+'; Max-Age=2592000; HttpOnly');
+                if (args.shareURL) {
+                    var {hostname} = new URL(args.custom?args.custom:decodeURIComponent(args.site));
+                    res.setHeader('content-type', 'text/html; chartset=utf-8');
+                    var html = '<html><head><title>Share URL</title></head><body><br><center><p>drag the link below to your bookmark bar</p><p>Or right click and press copy link to share</p><p>or just click it to continue</p><a href="'+req.url.replace('shareURL=true', '')+'">'+hostname+'</a></center></body></html>';
+                    html = bodyBuffer(html);
+                    res.setHeader('content-length', html.byteLength);
+                    res.writeHead(200);
+                    res.end(html);
+                } else {
+                    res.setHeader('location', path2Redir2 || '/');
+                    res.setHeader('content-length', 0);
+                    res.writeHead(307);
+                    res.end();
+                }
                 return;
             }
+        } else {
+            errMsg = 'URL not chosen';
         }
     }
-    res.setHeader('content-type', 'text/html; chartset=utf-8')
+    res.setHeader('content-type', 'text/html; chartset=utf-8');
     var html = '';
-    html += '<html><head><title>Change Site to Serve</title></head><body><ul><br><h1>Change Site to Serve</h1><br><br><ul><form action="" method="GET">';
+    html += '<html><head><title>Change Site to Serve</title></head><body><ul><br><h1>Change Site to Serve</h1><ul>';
+    if (errMsg && errMsg.trim()) {
+        html += '<p style="color:red;">Error: '+errMsg+'</p>';
+    }
+    if (adultContent) {
+        html += '<p style="color:red;">Warning: site may include adult content. Please confirm your settings</p>';
+    }
+    html += '<form action="" method="GET">';
     for (var i=0; i<sites.length; i++) {
         html += '<input type="radio" id="'+encodeURIComponent(sites[i][0])+'" name="site" value="'+encodeURIComponent(sites[i][0])+'"><label for="'+encodeURIComponent(sites[i][0])+'">'+sites[i][2]+(sites[i][1]?' (buggy)':'')+'</label><br>';
     }
-    html += '<br><label for="custom">Custom URL</label><input type="text" id="custom" name="custom"><br><br><input type="checkbox" id="JSReplaceURL" name="JSReplaceURL" value="true" checked><label for="JSReplaceURL"> Replace Javascript // urls (may break some sites)</label><br><br><input type="checkbox" id="absoluteSite" name="absoluteSite" value="true"><label for="absoluteSite"> Set as absolute proxy site (required for some sites, recommended to clear your cookies before enabling)</label><br><br><input type="checkbox" id="hidden" name="hidden" value="true"><label for="hidden"> Hide page title/url from search history (will appear as google classroom)</label><br><br><input type="submit" value="Submit"><ul></ul>'
-    if (errMsg && errMsg.trim()) {
-        html += '<br><br><p style="color:red;">Error: '+errMsg+'</p>'
+    html += '<br><label for="custom">Custom URL</label><input type="text" id="custom" name="custom"><br><br><input type="checkbox" id="JSReplaceURL" name="JSReplaceURL" value="true" checked><label for="JSReplaceURL"> Replace Javascript // urls (may break some sites)</label><br><br><input type="checkbox" id="absoluteSite" name="absoluteSite" value="true"><label for="absoluteSite"> Set as absolute proxy site (required for some sites, recommended to clear your cookies before enabling to prevent possible leak of personal data)</label><br><br><input type="checkbox" id="hidden" name="hidden" value="true"><label for="hidden"> Hide page title/url from search history (will appear as google classroom)</label><br><br><input type="checkbox" id="replaceExternal" name="replaceExternal" value="true"><label for="replaceExternal"> Replace External URLs</label><br><br><input type="checkbox" id="shareURL" name="shareURL" value="true"><label for="shareURL"> Get url to share (or bookmark)</label><br><br>';
+    if (adultContent) {
+        html += '<input type="checkbox" id="confirmation" name="confirmation" value="true"><label for="confirmation"> Check this box to confirm you know what you are about to see may be adult content.</label><br><br>';
     }
+    html +='<input type="submit" value="Submit"></form><ul></ul>';
     html += '</body></html>';
-    html = Buffer.from(html);
+    html = bodyBuffer(html);
     res.setHeader('content-length', html.byteLength);
     res.end(html)
 }
 
 function hideTitle(req, res, opts) {
-    var html = '<html><head><link rel="icon" type="image/png" href="/https:/ssl.gstatic.com/classroom/favicon.png"><title>Classes</title><meta name="viewport" content="width=device-width, initial-scale=1"><style>*{padding:0;margin:0;}iframe{margin:0 auto;}</style></head><body><iframe width=99% height=99% frameBoarder=0 src="/"></iframe></body></html>';
-    html = Buffer.from(html);
+    var url = '/';
+    if (req.url.includes('?')) {
+        url = transformArgs(req.url).url;
+    }
+    var html = '<html><head><link rel="icon" type="image/png" href="/https:/ssl.gstatic.com/classroom/favicon.png"><title>Classes</title><meta name="viewport" content="width=device-width, initial-scale=1"><style>*{padding:0;margin:0;}iframe{margin:0 auto;}</style></head><body><noscript><p>Some features may not work without javascript</p></noscript><script>var iframe=document.getElementById("mainFrame");function goBack(){iframe.contentWindow.history.back();};function goForward() {iframe.contentWindow.history.forward();}</script><button onclick="goBack()">Back</button> <button onclick="goForward()">Forward</button><iframe width=99% height=95% frameBoarder=0 src="'+url+'" id="mainFrame"></iframe></body></html>';
+    html = bodyBuffer(html);
     res.setHeader('content-length', html.byteLength);
     res.setHeader('content-type', 'text/html; chartset=utf-8');
     res.end(html);
+}
+
+//todo
+async function postGet(req, res) {
+    if (req.method === 'GET') {
+        var html = '<html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><form method="POST" action=""><br><label for="url">link</label><input type="text" id="url" name="url"><br><br><input type="submit" value="Submit"></form></body></html>';
+        html = bodyBuffer(html);
+        res.setHeader('content-length', html.byteLength);
+        res.setHeader('content-type', 'text/html; chartset=utf-8');
+        res.end(html);
+        return null;
+    }
+    var body = await consumeBody(req);
+    var args = transformArgs('?'+body);
+    if (! args.url.startsWith('/')) {
+        args.url = '/'+args.url;
+    }
+    return args.url;
 }
 
 var server = http.createServer(async function(req, res) {
@@ -506,6 +577,7 @@ var server = http.createServer(async function(req, res) {
         opts.proxyJSReplace = (req.headers.cookie.split('proxySettings=').pop().split(';')[0].split('_')[1] === '1');
         opts.isAbsoluteProxy = (req.headers.cookie.split('proxySettings=').pop().split(';')[0].split('_')[2] === '1');
         opts.useHiddenPage = (req.headers.cookie.split('proxySettings=').pop().split(';')[0].split('_')[3] === '1');
+        opts.replaceExternalUrls = (req.headers.cookie.split('proxySettings=').pop().split(';')[0].split('_')[4] === '1');
     }
     if (! opts.site2Proxy) {
         res.setHeader('location', '/changeSiteToServe');
@@ -518,8 +590,8 @@ var server = http.createServer(async function(req, res) {
         hideTitle(req, res, opts);
         return
     }
-    if (req.url === '/' && opts.useHiddenPage && req.headers['sec-fetch-dest'] !== 'iframe') {
-        res.setHeader('location', '/hideTitle');
+    if (opts.useHiddenPage && req.headers['sec-fetch-dest'] === 'document') {
+        res.setHeader('location', '/hideTitle?url='+encodeURIComponent(req.url));
         res.setHeader('content-length', 0);
         res.writeHead(307);
         res.end();
@@ -535,12 +607,23 @@ var server = http.createServer(async function(req, res) {
         res.end();
         return;
     }
-    var url = req.url.startsWith('/http') ? req.url.substring(1) : opts.site2Proxy+req.url;
-    if (req.url.startsWith('/https') && req.url.startsWith('/https:/') && !req.url.startsWith('/https://')) {
-        url = req.url.substring(1).replace('https:/', 'https://')
+    var url=req.url,method=req.method,consumed=false;
+    if (url.split('?')[0] === '/postGet') {
+        url = await postGet(req, res);
+        if (url === null) {
+            return;
+        }
+        method = 'GET';
+        consumed = true;
     }
-    if (req.url.startsWith('/http') && req.url.startsWith('/http:/') && !req.url.startsWith('/http://')) {
-        url = req.url.substring(1).replace('http:/', 'http://')
+    url = url.startsWith('/http') ? url.substring(1) : opts.site2Proxy+url;
+    if (url.startsWith('https:/') &&
+        !url.startsWith('https://')) {
+        url = url.replace('https:/', 'https://');
+    }
+    if (url.startsWith('http:/') &&
+        !url.startsWith('http://')) {
+        url = url.replace('http:/', 'http://');
     }
     if (url.startsWith('https://https:/')) {
         url = url.replace('https://https:/', 'https:/');
@@ -548,25 +631,25 @@ var server = http.createServer(async function(req, res) {
     if (url.startsWith('http://http:/')) {
         url = url.replace('http://http:/', 'http:/');
     }
-    var args = transformArgs(req.url);
-    if (args.vc) {
-        url = removeArg(url, 'vc');
-    }
-    if (args.nc) {
-        url = removeArg(url, 'nc');
-    }
-    if (args.video) {
-        url = removeArg(url, 'video');
+    var args = transformArgs(url);
+    url = removeArg(url, 'vc');
+    url = removeArg(url, 'nc');
+    url = removeArg(url, 'video');
+    if (url.endsWith('?')) {
+        url = url.substring(0, url.length-1);
     }
     url=url.replaceAll('https%3A%2F%2F%2F', '');
     url=url.replaceAll('https%3A%2F'+req.headers.host, 'https%3A%2F%2F'+req.headers.host);
     var vc = args.vc, nc = args.nc;
-    var reqBody = await consumeBody(req);
-    if (req.headers['content-type'] && req.headers['content-type'].includes('x-www-form-urlencoded')) {
-        reqBody = Buffer.from(parseTextFile(reqBody.toString(), false, true, opts.site2Proxy, url, host, false));
+    var reqBody;
+    if (!consumed) {
+        reqBody = await consumeBody(req);
+        if (req.headers['content-type'] && req.headers['content-type'].includes('x-www-form-urlencoded')) {
+            reqBody = Buffer.from(parseTextFile(reqBody.toString(), false, true, opts, url, host, false));
+        }
     }
     try {
-        var body = await fetch(req.method, url, req.headers, reqBody, opts, host);
+        var body = await fetch(method, url, req.headers, reqBody, opts, host);
     } catch(e) {
         console.log(e)
         res.writeHead(404);
@@ -625,14 +708,14 @@ var server = http.createServer(async function(req, res) {
         var mime = body[2];
         //javascript/html parsing
         if (!nc || (nc != '1' && nc != 'true')) {
-            body = parseTextFile(body[1], body[2].includes('html'), body[2].includes('x-www-form-urlencoded'), opts.site2Proxy, url, host, opts.proxyJSReplace);
+            body = parseTextFile(body[1], body[2].includes('html'), body[2].includes('x-www-form-urlencoded'), opts, url, host, opts.proxyJSReplace);
         } else {
             body = body[1];
         }
         if (opts.site2Proxy === 'https://www.instagram.com' && mime.includes('javascript') && !url.includes('worker')) {
             body+='\nif (typeof window !== undefined && typeof document !== undefined && !window.checkInterval) {window.checkInterval=setInterval(function(){document.querySelectorAll("svg").forEach(e => {if (e.attributes["aria-label"]&&e.attributes["aria-label"].textContent) {e.innerHTML = e.attributes["aria-label"].textContent}})}, 200)}';
         }
-        body = Buffer.from(body);
+        body = bodyBuffer(body);
         res.setHeader('content-length', body.byteLength);
         res.writeHead(code || 200);
         res.end(body);
@@ -661,6 +744,7 @@ function createHttpHeader(line, headers) {
 }
 
 server.on('upgrade', function(req, socket, head) {
+    console.log(req.url, 'upgrade')
     var needsToSetCookies = [];
     if (head && head.length) socket.unshift(head);
     socket.setTimeout(0);
