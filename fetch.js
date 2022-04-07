@@ -17,14 +17,14 @@ global.parseSetCookie = function(cookie, hostname, isAbsoluteProxy) {
 global.parseResCookie = function(cookie, hostname, isAbsoluteProxy) {
     cookie = cookie.trim();
     if (! cookie.startsWith('ck_') || isAbsoluteProxy) {
-        return [cookie.trim(), null];
+        return cookie.trim();
     }
     var parts = cookie.split('_');
     var httpOnly = parseInt(parts[1]);
     var allowHost = parts[2];
     var reqHost = new RegExp(allowHost);
     if (hostname.match(reqHost) !== null) {
-        return [cookie.replace('ck_'+parts[1]+'_'+parts[2]+'_', '').trim(), null];
+        return cookie.replace('ck_'+parts[1]+'_'+parts[2]+'_', '').trim();
     }
     return null;
 }
@@ -32,7 +32,6 @@ global.parseResCookie = function(cookie, hostname, isAbsoluteProxy) {
 module.exports = function(method, url, headers, body, opts, reqHost) {
     return new Promise(function(resolve, reject) {
         var newHeaders = {};
-        var needsToSetCookies = [];
         var {hostname} = new URL(url);
         if (headers) {
             for (var k in headers) {
@@ -48,10 +47,7 @@ module.exports = function(method, url, headers, body, opts, reqHost) {
                         }
                         var a = parseResCookie(ck[i], hostname, opts.isAbsoluteProxy);
                         if (a !== null) {
-                            cookies.push(a[0]);
-                            if (a[1] !== null) {
-                                needsToSetCookies.push(a[1]);
-                            }
+                            cookies.push(a);
                         }
                     }
                     newHeaders[k] = cookies.join('; ');
@@ -79,12 +75,26 @@ module.exports = function(method, url, headers, body, opts, reqHost) {
                   res.headers['content-type'].includes('html') ||
                   res.headers['content-type'].includes('json') ||
                   res.headers['content-type'].includes('x-www-form-urlencoded')))) {
-                resolve([false, res, res.headers['content-type'], res.headers, res.statusCode, needsToSetCookies])
+                resolve({
+                    isString: false,
+                    body: null,
+                    res: res,
+                    contentType: res.headers['content-type'],
+                    headers: res.headers,
+                    code: res.statusCode
+                });
                 return;
             }
             var body = await consumeBody(res);
             body = body.toString();
-            resolve([true, body, res.headers['content-type'], res.headers, res.statusCode, needsToSetCookies]);
+            resolve({
+                isString: true,
+                body: body,
+                res: res,
+                contentType: res.headers['content-type'],
+                headers: res.headers,
+                code: res.statusCode
+            });
         })
         req.on('error', function(e) {
             reject(e);

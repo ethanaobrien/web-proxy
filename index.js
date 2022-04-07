@@ -12,10 +12,13 @@ var a = require("./utils.js");
 for (var k in a) {
     global[k] = a[k];
 }
-global.debug = true;
+global.debug = false;
 //if you want to force a site to proxy, put url here
 //leave empty if not. Will set the client to absolute proxy mode
 global.forceSite = '';
+if (process.env.FORCE_SITE && typeof process.env.FORCE_SITE == 'string') {
+    global.forceSite = process.env.FORCE_SITE
+}
 
 let port = 3000;
 global.sites = [ //no '/' at end
@@ -47,7 +50,6 @@ function hideTitle(req, res, opts) {
     res.end(html);
 }
 
-//todo
 async function postGet(req, res) {
     if (req.method === 'GET') {
         var html = '<html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><form method="POST" action=""><br><label for="url">link</label><input type="text" id="url" name="url"><br><br><input type="submit" value="Submit"></form></body></html>';
@@ -115,36 +117,14 @@ var server = http.createServer(async function(req, res) {
     if (url.split('?')[0] === '/postGet') {
         url = await postGet(req, res);
         if (url === null) {
-            return;
+            return null;
         }
         method = 'GET';
         consumed = true;
     }
-    url = url.startsWith('/http') ? url.substring(1) : opts.site2Proxy+url;
-    if (url.startsWith('https:/') &&
-        !url.startsWith('https://')) {
-        url = url.replace('https:/', 'https://');
-    }
-    if (url.startsWith('http:/') &&
-        !url.startsWith('http://')) {
-        url = url.replace('http:/', 'http://');
-    }
-    if (url.startsWith('https://https:/')) {
-        url = url.replace('https://https:/', 'https:/');
-    }
-    if (url.startsWith('http://http:/')) {
-        url = url.replace('http://http:/', 'http:/');
-    }
-    var args = transformArgs(url);
-    url = removeArg(url, 'vc');
-    url = removeArg(url, 'nc');
-    url = removeArg(url, 'video');
-    if (url.endsWith('?')) {
-        url = url.substring(0, url.length-1);
-    }
-    url=url.replaceAll('https%3A%2F%2F%2F', '')
-        .replaceAll('https%3A%2F'+req.headers.host, 'https%3A%2F%2F'+req.headers.host)
-        .replaceAll(host, (new URL(url)).hostname);
+    var a = processUrl(url, host, opts);
+    url = a.url;
+    args = a.args;
     var vc = args.vc, nc = args.nc;
     var reqBody;
     if (!consumed) {
@@ -154,7 +134,7 @@ var server = http.createServer(async function(req, res) {
         }
     }
     try {
-        var body = await fetch(method, url, req.headers, reqBody, opts, host);
+        var resp = await fetch(method, url, req.headers, reqBody, opts, host);
     } catch(e) {
         if (debug) {
             console.log(e)
@@ -163,72 +143,61 @@ var server = http.createServer(async function(req, res) {
         res.end('error');
         return;
     }
-    if (['1', 'true'].includes(args.video) && body[0] === true && body[1].includes('setVideoUrlHigh(\'')) {
-        res.setHeader('location', '/'+body[1].split('setVideoUrlHigh(\'').pop().split("'")[0]);
+    if (['1', 'true'].includes(args.video) && resp.isString && resp.body.includes('setVideoUrlHigh(\'')) {
+        res.setHeader('location', '/'+resp.body.split('setVideoUrlHigh(\'').pop().split("'")[0]);
         res.setHeader('content-length', 0);
         res.writeHead(307);
         res.end();
         return;
     }
-    for (var k in body[3]) {
-        if (['content-security-policy', 'content-encoding'].includes(k) || (k === 'content-length' && body[0] === true)) {
+    for (var k in resp.headers) {
+        if (['content-security-policy', 'content-encoding'].includes(k) || (k === 'content-length' && resp.isString)) {
             continue
         }
         if (k === 'set-cookie') {
             var {hostname} = new URL(url);
-            if (Array.isArray(body[3][k])) {
+            if (Array.isArray(resp.headers[k])) {
                 var cookies = [];
-                for (var i=0; i<body[3][k].length; i++) {
-                    cookies.push(parseSetCookie(body[3][k][i], hostname, opts.isAbsoluteProxy));
+                for (var i=0; i<resp.headers[k].length; i++) {
+                    cookies.push(parseSetCookie(resp.headers[k][i], hostname, opts.isAbsoluteProxy));
                 }
                 res.setHeader(k, cookies);
             } else {
-                res.setHeader(k, parseSetCookie(body[3][k], hostname, opts.isAbsoluteProxy));
+                res.setHeader(k, parseSetCookie(resp.headers[k], hostname, opts.isAbsoluteProxy));
             }
             continue;
         }
-        if (body[3][k].startsWith('//')) {
-            body[3][k] = body[3][k].replaceAll('//', 'https://');
+        if (resp.headers[k].startsWith('//')) {
+            resp.headers[k] = resp.headers[k].replaceAll('//', 'https://');
         }
-        if (typeof body[3][k] == 'string') {
-            res.setHeader(k, body[3][k].replaceAll(opts.site2Proxy+'/', '/').replaceAll(opts.site2Proxy, '').replaceAll('http', '/http'));
+        if (typeof resp.headers[k] == 'string') {
+            res.setHeader(k, resp.headers[k].replaceAll(opts.site2Proxy+'/', '/').replaceAll(opts.site2Proxy, '').replaceAll('http', '/http'));
         } else {
-            res.setHeader(k, body[3][k]);
+            res.setHeader(k, resp.headers[k]);
         }
     }
     res.setHeader('x-frame-options', 'SAMEORIGIN');
     if (vc == 'true' || vc == '1' || nc == 'true' || nc == '1') {
         res.setHeader('content-type', 'text/plain');
     }
-    if (body[5].length > 0) {
-        var a = res.getHeader('set-cookie');
-        if (!a) {
-            a = [];
-        }
-        for (var i=0; i<body[5].length; i++) {
-            a.push(body[5][i]);
-        }
-        res.setHeader('set-cookie', a);
-    }
-    if (body[0] === true) {
-        var code = body[4];
-        var mime = body[2];
+    if (resp.isString) {
         //javascript/html parsing
+        var body = '';
         if (!nc || (nc != '1' && nc != 'true')) {
-            body = parseTextFile(body[1], body[2].includes('html'), body[2].includes('x-www-form-urlencoded'), opts, url, host, opts.proxyJSReplace);
+            body = parseTextFile(resp.body, resp.contentType.includes('html'), resp.contentType.includes('x-www-form-urlencoded'), opts, url, host, opts.proxyJSReplace);
         } else {
-            body = body[1];
+            body = resp.body;
         }
-        if (opts.site2Proxy === 'https://www.instagram.com' && mime.includes('javascript') && !url.includes('worker')) {
+        if (opts.site2Proxy === 'https://www.instagram.com' && resp.contentType.includes('javascript') && !url.includes('worker')) {
             body+='\nif (typeof window !== undefined && typeof document !== undefined && !window.checkInterval) {window.checkInterval=setInterval(function(){document.querySelectorAll("svg").forEach(e => {if (e.attributes["aria-label"]&&e.attributes["aria-label"].textContent) {e.innerHTML = e.attributes["aria-label"].textContent}})}, 200)}';
         }
         body = bodyBuffer(body);
         res.setHeader('content-length', body.byteLength);
-        res.writeHead(code || 200);
+        res.writeHead(resp.code || 200);
         res.end(body);
     } else {
-        res.writeHead(body[4] || 200);
-        body[1].pipe(res);
+        res.writeHead(resp.code || 200);
+        resp.res.pipe(res);
     }
 })
 
@@ -252,7 +221,6 @@ function createHttpHeader(line, headers) {
 
 server.on('upgrade', function(req, socket, head) {
     console.log(req.url, 'upgrade')
-    var needsToSetCookies = [];
     if (head && head.length) socket.unshift(head);
     socket.setTimeout(0);
     socket.setNoDelay(true);
@@ -279,10 +247,7 @@ server.on('upgrade', function(req, socket, head) {
                     }
                     var a = parseResCookie(ck[i], hostname, opts.isAbsoluteProxy);
                     if (a !== null) {
-                        cookies.push(a[0]);
-                        if (a[1] !== null) {
-                            needsToSetCookies.push(a[1]);
-                        }
+                        cookies.push(a);
                     }
                 }
                 newHeaders[k] = cookies.join('; ');
@@ -304,14 +269,6 @@ server.on('upgrade', function(req, socket, head) {
     var proxyReq = https.request('https:/'+req.url);
     for (var k in newHeaders) {
         proxyReq.setHeader(k, newHeaders[k]);
-    }
-    if (needsToSetCookies > 0) {
-        var a = res.getHeader('set-cookie');
-        if (!a) {a = [];}
-        for (var i=0; i<needsToSetCookies.length; i++) {
-            a.push(needsToSetCookies[i]);
-        }
-        res.setHeader('set-cookie', a);
     }
     proxyReq.on('response', function(res) {
         if (!res.upgrade) {

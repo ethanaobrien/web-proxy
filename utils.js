@@ -159,5 +159,32 @@ module.exports = {
             return true;
         }
         return false;
+    },
+    processUrl: function(url, host, opts) {
+        url = url.startsWith('/http') ? url.substring(1) : opts.site2Proxy+url;
+        if (url.startsWith('https:/') &&
+            !url.startsWith('https://')) {
+            url = url.replace('https:/', 'https://');
+        }
+        if (url.startsWith('http:/') &&
+            !url.startsWith('http://')) {
+            url = url.replace('http:/', 'http://');
+        }
+        if (url.startsWith('https://https:/')) {
+            url = url.replace('https://https:/', 'https:/');
+        }
+        if (url.startsWith('http://http:/')) {
+            url = url.replace('http://http:/', 'http:/');
+        }
+        var args = transformArgs(url);
+        url = removeArg(url, 'vc');
+        url = removeArg(url, 'nc');
+        url = removeArg(url, 'video');
+        if (url.endsWith('?')) {
+            url = url.substring(0, url.length-1);
+        }
+        url=url.replaceAll('https%3A%2F%2F%2F', '')
+            .replaceAll('https%3A%2F'+host, 'https%3A%2F%2F'+host);
+        return {args:args, url:url};
     }
 }
