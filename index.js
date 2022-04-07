@@ -43,7 +43,7 @@ function hideTitle(req, res, opts) {
     if (req.url.includes('?')) {
         url = transformArgs(req.url).url;
     }
-    var html = '<html><head><link rel="icon" type="image/png" href="/https:/ssl.gstatic.com/classroom/favicon.png"><title>Classes</title><meta name="viewport" content="width=device-width, initial-scale=1"><style>*{padding:0;margin:0;}iframe{margin:0 auto;}</style></head><body><noscript><p>Some features may not work without javascript</p></noscript><script>var iframe=document.getElementById("mainFrame");function goBack(){iframe.contentWindow.history.back();};function goForward() {iframe.contentWindow.history.forward();}</script><button onclick="goBack()">Back</button> <button onclick="goForward()">Forward</button><iframe width=99% height=95% frameBoarder=0 src="'+url+'" id="mainFrame"></iframe></body></html>';
+    var html = '<html><head><link rel="icon" type="image/png" href="/https:/ssl.gstatic.com/classroom/favicon.png"><title>Classes</title><meta name="viewport" content="width=device-width, initial-scale=1"><style>*{padding:0;margin:0;}iframe{margin:0 auto;}</style></head><body><noscript><p>Some features may not work without javascript</p></noscript><button onclick="goBack()">Back</button> <button onclick="goForward()">Forward</button><iframe width=99% height=95% frameBoarder=0 src="'+url+'" id="mainFrame"></iframe><script>var iframe=document.getElementById("mainFrame");function goBack(){iframe.contentWindow.history.back();};function goForward() {iframe.contentWindow.history.forward();}</script></body></html>';
     html = bodyBuffer(html);
     res.setHeader('content-length', html.byteLength);
     res.setHeader('content-type', 'text/html; chartset=utf-8');
