@@ -13,6 +13,7 @@ for (var k in a) {
     global[k] = a[k];
 }
 global.debug = false;
+global.allowAdultContent = true;
 //if you want to force a site to proxy, put url here
 //leave empty if not. Will set the client to absolute proxy mode
 global.forceSite = '';

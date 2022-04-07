@@ -155,8 +155,17 @@ module.exports = {
         return Buffer.concat([Buffer.from(new Uint8Array([0xEF,0xBB,0xBF])), Buffer.from(body)]);
     },
     isNotGoodSite: function(url) {
-        if (url.includes('porn') || url.includes('xvideos') || url.includes('sex')) {
-            return true;
+        var keywords = [
+            atob('cG9ybg=='),
+            atob('c2V4'),
+            atob('eHZpZGVvcw=='),
+            atob('ZnVjaw=='),
+            atob('YXNz')
+        ];
+        for (var i=0; i<keywords.length; i++) {
+            if (url.toLowerCase().includes(keywords[i])) {
+                return true;
+            }
         }
         return false;
     },
