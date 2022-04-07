@@ -22,7 +22,7 @@ module.exports = async function(req, res) {
         res.setHeader('set-cookie', 'proxySettings='+encodeURIComponent(site)+'_1_1_0_0; Max-Age=2592000; HttpOnly');
         res.setHeader('location', path2Redir2 || '/');
         res.setHeader('content-length', 0);
-        res.writeHead(307);
+        res.writeHead(303);
         res.end();
         return;
     }
@@ -98,7 +98,7 @@ module.exports = async function(req, res) {
                 } else {
                     res.setHeader('location', path2Redir2 || '/');
                     res.setHeader('content-length', 0);
-                    res.writeHead(307);
+                    res.writeHead(303);
                     res.end();
                 }
                 return;
