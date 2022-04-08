@@ -128,14 +128,14 @@ var server = http.createServer(async function(req, res) {
         }
     }
     var isNotGood = isNotGoodSite((new URL(url)).hostname);
-    if (isNotGood && !allowAdultContent) {
+    if (isNotGood && !allowAdultContent && false) {
         var body = bodyBuffer('<p>site blocked. Contact the site owner for more information</p>');
         res.setHeader('content-type', 'text/html; chartset=utf-8');
         res.setHeader('content-length', body.byteLength);
         res.writeHead(200);
         res.end(body);
         return;
-    } else if (isNotGood && !opts.allowAdultContent) {
+    } else if (isNotGood && !opts.allowAdultContent && false) {
         var body = bodyBuffer('<p>this site requires configuring to visit. </p><a href="/changeSiteToServe">Go here to change your settings</a>');
         res.setHeader('content-type', 'text/html; chartset=utf-8');
         res.setHeader('content-length', body.byteLength);
@@ -175,6 +175,7 @@ var server = http.createServer(async function(req, res) {
         res.end('error');
         return;
     }
+    if (resp.isString) {console.log(resp.body.includes('setVideoUrlHigh(\''))}
     if (['1', 'true'].includes(args.video) && resp.isString && resp.body.includes('setVideoUrlHigh(\'')) {
         res.setHeader('location', '/'+resp.body.split('setVideoUrlHigh(\'').pop().split("'")[0]);
         res.setHeader('content-length', 0);

@@ -137,7 +137,6 @@ module.exports = async function(req, res) {
         absoluteSite = opts.isAbsoluteProxy?' checked':'';
         gc = opts.useHiddenPage?' checked':'';
         external = opts.replaceExternalUrls?' checked':'';
-        share = opts.allowAdultContent?' checked':'';
     }
     if (args) {
         customVal = args.custom || '';
