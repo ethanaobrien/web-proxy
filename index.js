@@ -66,9 +66,11 @@ async function postGet(req, res) {
     var body = await consumeBody(req);
     var args = transformArgs('?'+body);
     var a;
-    while (a = await check4Redirects(args.url, true)) {
-        args.url = a;
-    }
+    try {
+        while (a = await check4Redirects(args.url, true)) {
+            args.url = a;
+        }
+    } catch(e) {}
     if (! args.url.startsWith('/')) {
         args.url = '/'+args.url;
     }
