@@ -56,7 +56,13 @@ module.exports = function(method, url, headers, body, opts, reqHost) {
                 if (headers[k].includes(reqHost)) {
                     headers[k] = headers[k].replaceAll(headers[k].split('https://').pop().split('/')[0], opts.site2Proxy.split('://').pop())
                 }
-                newHeaders[k] = headers[k];
+                if (typeof headers[k] == 'string') {
+                    newHeaders[k] = headers[k]
+                        .replaceAll('/postGet', '/')
+                        .replaceAll('/changeSiteToServe', '/');
+                } else {
+                    newHeaders[k] = headers[k];
+                }
             }
         }
         newHeaders['host'] = hostname;

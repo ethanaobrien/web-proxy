@@ -83,7 +83,7 @@ var server = http.createServer(async function(req, res) {
         return;
     }
     var opts = getOpts(req.headers.cookie);
-    if (! opts.site2Proxy) {
+    if (! opts.site2Proxy && req.url.split('?')[0] !== '/postGet' && !req.url.startsWith('/http')) {
         res.setHeader('location', '/changeSiteToServe');
         res.setHeader('content-length', 0);
         res.writeHead(307);
@@ -97,17 +97,30 @@ var server = http.createServer(async function(req, res) {
         res.end();
         return;
     }
-    if (url.split('?')[0] === '/postGet') {
+    if (req.url.split('?')[0] === '/postGet') {
         url = await postGet(req, res);
         if (url === null) {
             return null;
         }
         method = 'GET';
         consumed = true;
+        if (req.headers['cache-control']) {
+            delete req.headers['cache-control'];
+        }
+        if (req.headers['content-length']) {
+            delete req.headers['content-length'];
+        }
     }
     var a = processUrl(url, host, opts);
     url = a.url;
     args = a.args;
+    if (!opts.site2Proxy) {
+        opts.site2Proxy = new URL('/', url);
+        opts.site2Proxy = opts.site2Proxy.toString();
+        if (opts.site2Proxy.endsWith('/')) {
+            opts.site2Proxy = opts.site2Proxy.substring(0, opts.site2Proxy.length-1);
+        }
+    }
     var isNotGood = isNotGoodSite((new URL(url)).hostname);
     if (isNotGood && !allowAdultContent) {
         var body = bodyBuffer('<p>site blocked. Contact the site owner for more information</p>');
