@@ -47,34 +47,11 @@ function hideTitle(req, res, opts) {
     if (req.url.includes('?')) {
         url = transformArgs(req.url).url;
     }
-    var html = '<html><head><link rel="icon" type="image/png" href="/https:/ssl.gstatic.com/classroom/favicon.png"><title>Classes</title><meta name="viewport" content="width=device-width, initial-scale=1"><style>*{padding:0;margin:0;}iframe{margin:0 auto;}</style></head><body><noscript><p>Some features may not work without javascript</p></noscript><button onclick="goBack()">Back</button> <button onclick="goForward()">Forward</button><iframe width=99% height=95% frameBoarder=0 src="'+url+'" id="mainFrame"></iframe><script>var iframe=document.getElementById("mainFrame");function goBack(){iframe.contentWindow.history.back();};function goForward() {iframe.contentWindow.history.forward();}</script></body></html>';
+    var html = '<html><head><link rel="icon" type="image/png" href="/https:/ssl.gstatic.com/classroom/favicon.png"><title>Classes</title><meta name="viewport" content="width=device-width, initial-scale=1"><style>*{padding:0;margin:0;}iframe{margin:0 auto;}</style></head><body><noscript><p>Some features may not work without javascript</p></noscript><button onclick="goBack()">Back</button> <button onclick="goForward()">Forward</button> <input type="text" value="'+url+'" id="urlElem" size="50%" onkeydown="checkSubmit(event)"> <button onclick="changeSite()">Go</button><iframe width=99% height=95% frameBoarder=0 src="'+url+'" id="mainFrame"></iframe><script>var iframe=document.getElementById("mainFrame");var urlElem=document.getElementById("urlElem");function goBack(){iframe.contentWindow.history.back();};function goForward() {iframe.contentWindow.history.forward();};function changeSite() {if (!urlElem.value.startsWith("/")){urlElem.value="/"+urlElem.value};iframe.src=urlElem.value};var asd="";function checkSubmit(e){if(e.key.toLowerCase()==="enter"){changeSite()}};setInterval(function() {if(iframe.contentWindow.location.href!=asd){asd=iframe.contentWindow.location.href}else{return};urlElem.value=iframe.contentWindow.location.href.replace(window.location.protocol+"//"+window.location.host, "")},500)</script></body></html>';
     html = bodyBuffer(html);
     res.setHeader('content-length', html.byteLength);
     res.setHeader('content-type', 'text/html; chartset=utf-8');
     res.end(html);
-}
-
-async function postGet(req, res) {
-    if (req.method === 'GET') {
-        var html = '<html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><form method="POST" action="" autocomplete="off"><br><label for="url">link</label><input type="text" id="url" name="url"><br><br><input type="submit" value="Submit"></form></body></html>';
-        html = bodyBuffer(html);
-        res.setHeader('content-length', html.byteLength);
-        res.setHeader('content-type', 'text/html; chartset=utf-8');
-        res.end(html);
-        return null;
-    }
-    var body = await consumeBody(req);
-    var args = transformArgs('?'+body);
-    var a;
-    try {
-        while (a = await check4Redirects(args.url, true)) {
-            args.url = a;
-        }
-    } catch(e) {}
-    if (! args.url.startsWith('/')) {
-        args.url = '/'+args.url;
-    }
-    return args.url;
 }
 
 var server = http.createServer(async function(req, res) {
@@ -89,7 +66,7 @@ var server = http.createServer(async function(req, res) {
         return;
     }
     var opts = getOpts(req.headers.cookie);
-    if (! opts.site2Proxy && req.url.split('?')[0] !== '/postGet' && !req.url.startsWith('/http')) {
+    if (! opts.site2Proxy && req.url.split('?')[0] && !req.url.startsWith('/http')) {
         res.setHeader('location', '/changeSiteToServe');
         res.setHeader('content-length', 0);
         res.writeHead(307);
@@ -102,20 +79,6 @@ var server = http.createServer(async function(req, res) {
         res.writeHead(301);
         res.end();
         return;
-    }
-    if (req.url.split('?')[0] === '/postGet') {
-        url = await postGet(req, res);
-        if (url === null) {
-            return null;
-        }
-        method = 'GET';
-        consumed = true;
-        if (req.headers['cache-control']) {
-            delete req.headers['cache-control'];
-        }
-        if (req.headers['content-length']) {
-            delete req.headers['content-length'];
-        }
     }
     var a = processUrl(url, host, opts);
     url = a.url;
