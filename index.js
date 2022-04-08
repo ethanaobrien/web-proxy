@@ -56,7 +56,7 @@ function hideTitle(req, res, opts) {
 
 async function postGet(req, res) {
     if (req.method === 'GET') {
-        var html = '<html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><form method="POST" action=""><br><label for="url">link</label><input type="text" id="url" name="url"><br><br><input type="submit" value="Submit"></form></body></html>';
+        var html = '<html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><form method="POST" action="" autocomplete="off"><br><label for="url">link</label><input type="text" id="url" name="url"><br><br><input type="submit" value="Submit"></form></body></html>';
         html = bodyBuffer(html);
         res.setHeader('content-length', html.byteLength);
         res.setHeader('content-type', 'text/html; chartset=utf-8');
@@ -128,7 +128,7 @@ var server = http.createServer(async function(req, res) {
         hideTitle(req, res, opts);
         return
     }
-    if (opts.useHiddenPage && req.headers['sec-fetch-dest'] === 'document') {
+    if (opts.useHiddenPage && req.headers['sec-fetch-dest'] === 'document' && !consumed) {
         res.setHeader('location', '/hideTitle?url='+encodeURIComponent(req.url));
         res.setHeader('content-length', 0);
         res.writeHead(307);
