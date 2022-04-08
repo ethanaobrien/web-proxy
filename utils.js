@@ -45,8 +45,7 @@ module.exports = {
         if (! url.split('?').pop().includes(argName+'=')) {
             return url;
         }
-        var a = url.split(argName).pop().split('&')[0];
-        return url.replace(argName+a, '')
+        return url.replace(argName+url.split('?').pop().split(argName).pop().split('&')[0], '')
     },
     check4Redirects: function(url, allRedirects) {
         return new Promise(function(resolve, reject) {
