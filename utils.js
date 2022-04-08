@@ -48,7 +48,7 @@ module.exports = {
         var a = url.split(argName).pop().split('&')[0];
         return url.replace(argName+a, '')
     },
-    check4Redirects: function(url) {
+    check4Redirects: function(url, allRedirects) {
         return new Promise(function(resolve, reject) {
             var protReq = url.startsWith('https:') ? https : http;
             protReq.get(url, function(res) {
@@ -56,7 +56,7 @@ module.exports = {
                     var {statusCode} = res;
                     if ([301, 302, 307].includes(statusCode) &&
                         res.headers['location'] &&
-                        (new URL(res.headers['location'])).pathname === '/') {
+                        (allRedirects ||(new URL(res.headers['location'])).pathname === '/')) {
                         res.resume();
                         resolve(res.headers['location']);
                     } else {
