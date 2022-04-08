@@ -6,6 +6,11 @@ if (! String.prototype.replaceAll) {
     }
 }
 
+String.prototype.replaceNC = function(a, b) {
+    var reg = new RegExp(a, "ig");
+    return this.replaceAll(reg, b);
+}
+
 module.exports = {
     consumeBody: function(res) {
         return new Promise(function(resolve, reject) {

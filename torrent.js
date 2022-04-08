@@ -1,4 +1,9 @@
 module.exports = function(req, res) {
+    if (!req.url.includes('magnet=')) {
+        res.writeHeader(400);
+        res.end('invalid request');
+        return;
+    }
     res.writeContinue();
     res.setHeader('Access-Control-Allow-Origin', '*');
     var args = transformArgs(req.url.split('magnet=')[0]);
