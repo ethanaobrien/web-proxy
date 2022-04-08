@@ -137,7 +137,7 @@ var server = http.createServer(async function(req, res) {
         res.end(body);
         return;
     }
-    if (req.url.split('?')[0] === '/hideTitle') {
+    if (req.url.split('?')[0] === '/hideTitle' && !consumed) {
         hideTitle(req, res, opts);
         return
     }
