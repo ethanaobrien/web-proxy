@@ -25,7 +25,7 @@ module.exports = function(body, isHtml, isUrlEncoded, opts, url, reqHost, proxyJ
         .replaceNC('"'+hostname, '"'+reqHost)
         .replaceNC("'"+hn2, "'"+reqHost)
         .replaceNC('"'+hn2, '"'+reqHost)
-        .replaceNC(/discord/ig, 'discordddd')
+        .replaceNC('discord', 'discordddd')
         .replaceNC('wss://', 'wss://'+reqHost+'/')
     if (isHtml) {
         body = body.replaceNC('integrity=', 'sadfghj=').replaceAll('magnet:?', '/torrentStream?stage=step1&magnet=');
