@@ -195,5 +195,17 @@ module.exports = {
         url=url.replaceAll('https%3A%2F%2F%2F', '')
             .replaceAll('https%3A%2F'+host, 'https%3A%2F%2F'+host);
         return {args:args, url:url};
+    },
+    getOpts: function(cookies) {
+        var opts = {};
+        if (cookies && cookies.includes('proxySettings=')) {
+            opts.site2Proxy = decodeURIComponent(cookies.split('proxySettings=').pop().split(';')[0].split('_')[0]);
+            opts.proxyJSReplace = (cookies.split('proxySettings=').pop().split(';')[0].split('_')[1] === '1');
+            opts.isAbsoluteProxy = (cookies.split('proxySettings=').pop().split(';')[0].split('_')[2] === '1');
+            opts.useHiddenPage = (cookies.split('proxySettings=').pop().split(';')[0].split('_')[3] === '1');
+            opts.replaceExternalUrls = (cookies.split('proxySettings=').pop().split(';')[0].split('_')[4] === '1');
+            opts.allowAdultContent = (cookies.split('proxySettings=').pop().split(';')[0].split('_')[5] === '1');
+        }
+        return opts;
     }
 }

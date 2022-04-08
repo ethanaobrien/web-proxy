@@ -19,7 +19,7 @@ module.exports = async function(req, res) {
             res.end('Message for site owner: Invalid absolute url');
             return;
         }
-        res.setHeader('set-cookie', 'proxySettings='+encodeURIComponent(site)+'_1_1_0_0; Max-Age=2592000; HttpOnly');
+        res.setHeader('set-cookie', 'proxySettings='+encodeURIComponent(site)+'_1_1_0_0_0; Max-Age=2592000; HttpOnly');
         res.setHeader('location', path2Redir2 || '/');
         res.setHeader('content-length', 0);
         res.writeHead(303);
@@ -81,7 +81,7 @@ module.exports = async function(req, res) {
                 adultContent = true;
             }
             if (!error) {
-                res.setHeader('set-cookie', 'proxySettings='+(args.custom?encodeURIComponent(args.custom):args.site)+'_'+(args.JSReplaceURL?'1':'0')+'_'+(args.absoluteSite?'1':'0')+'_'+(args.hidden?'1':'0')+'_'+(args.replaceExternal?'1':'0')+'; Max-Age=2592000; HttpOnly');
+                res.setHeader('set-cookie', 'proxySettings='+(args.custom?encodeURIComponent(args.custom):args.site)+'_'+(args.JSReplaceURL?'1':'0')+'_'+(args.absoluteSite?'1':'0')+'_'+(args.hidden?'1':'0')+'_'+(args.replaceExternal?'1':'0')+'_'+(args.confirmation?'1':'0')+'; Max-Age=2592000; HttpOnly');
                 if (args.shareURL) {
                     var {hostname} = new URL(args.custom?args.custom:decodeURIComponent(args.site));
                     res.setHeader('content-type', 'text/html; chartset=utf-8');
@@ -130,6 +130,15 @@ module.exports = async function(req, res) {
         gc='',
         external='',
         share='';
+    if (req.headers.cookie) {
+        var opts = getOpts(req.headers.cookie);
+        customVal = opts.site2Proxy || '';
+        rpSlashUrls = opts.proxyJSReplace?' checked':'';
+        absoluteSite = opts.isAbsoluteProxy?' checked':'';
+        gc = opts.useHiddenPage?' checked':'';
+        external = opts.replaceExternalUrls?' checked':'';
+        share = opts.allowAdultContent?' checked':'';
+    }
     if (args) {
         customVal = args.custom || '';
         rpSlashUrls = args.JSReplaceURL?' checked':'';

@@ -20,6 +20,9 @@ global.forceSite = '';
 if (process.env.FORCE_SITE && typeof process.env.FORCE_SITE == 'string') {
     global.forceSite = process.env.FORCE_SITE
 }
+if (process.argv.includes('--site')) {
+    global.forceSite = process.argv[process.argv.indexOf('--site')+1];
+}
 
 let port = 3000;
 global.sites = [ //no '/' at end
@@ -70,6 +73,7 @@ async function postGet(req, res) {
 
 var server = http.createServer(async function(req, res) {
     var host = req.headers.host;
+    var url=req.url,method=req.method,consumed=false;
     if (req.url.split('?')[0] === '/torrentStream') {
         torrent(req, res);
         return
@@ -78,19 +82,46 @@ var server = http.createServer(async function(req, res) {
         changeHtml(req, res);
         return;
     }
-    var opts = {};
-    if (req.headers.cookie && req.headers.cookie.includes('proxySettings=')) {
-        opts.site2Proxy = decodeURIComponent(req.headers.cookie.split('proxySettings=').pop().split(';')[0].split('_')[0]);
-        opts.proxyJSReplace = (req.headers.cookie.split('proxySettings=').pop().split(';')[0].split('_')[1] === '1');
-        opts.isAbsoluteProxy = (req.headers.cookie.split('proxySettings=').pop().split(';')[0].split('_')[2] === '1');
-        opts.useHiddenPage = (req.headers.cookie.split('proxySettings=').pop().split(';')[0].split('_')[3] === '1');
-        opts.replaceExternalUrls = (req.headers.cookie.split('proxySettings=').pop().split(';')[0].split('_')[4] === '1');
-    }
+    var opts = getOpts(req.headers.cookie);
     if (! opts.site2Proxy) {
         res.setHeader('location', '/changeSiteToServe');
         res.setHeader('content-length', 0);
         res.writeHead(307);
         res.end();
+        return;
+    }
+    if (req.url.startsWith('/http') && (req.url.substring(1).startsWith('https://'+req.headers.host) || req.url.substring(1).startsWith('https:/'+req.headers.host) || req.url.substring(1).startsWith('http://'+req.headers.host) || req.url.substring(1).startsWith('http:/'+req.headers.host))) {
+        res.setHeader('location', req.url.split('/'+req.headers.host).pop().replaceAll('//', '/'));
+        res.setHeader('content-length', 0);
+        res.writeHead(301);
+        res.end();
+        return;
+    }
+    if (url.split('?')[0] === '/postGet') {
+        url = await postGet(req, res);
+        if (url === null) {
+            return null;
+        }
+        method = 'GET';
+        consumed = true;
+    }
+    var a = processUrl(url, host, opts);
+    url = a.url;
+    args = a.args;
+    var isNotGood = isNotGoodSite((new URL(url)).hostname);
+    if (isNotGood && !allowAdultContent) {
+        var body = bodyBuffer('<p>site blocked. Contact the site owner for more information</p>');
+        res.setHeader('content-type', 'text/html; chartset=utf-8');
+        res.setHeader('content-length', body.byteLength);
+        res.writeHead(200);
+        res.end(body);
+        return;
+    } else if (isNotGood && !opts.allowAdultContent) {
+        var body = bodyBuffer('<p>this site requires configuring to visit. </p><a href="/changeSiteToServe">Go here to change your settings</a>');
+        res.setHeader('content-type', 'text/html; chartset=utf-8');
+        res.setHeader('content-length', body.byteLength);
+        res.writeHead(200);
+        res.end(body);
         return;
     }
     if (req.url.split('?')[0] === '/hideTitle') {
@@ -107,25 +138,6 @@ var server = http.createServer(async function(req, res) {
     if (!opts.proxyJSReplace) {
         opts.proxyJSReplace = true;
     }
-    if (req.url.startsWith('/http') && (req.url.substring(1).startsWith('https://'+req.headers.host) || req.url.substring(1).startsWith('https:/'+req.headers.host) || req.url.substring(1).startsWith('http://'+req.headers.host) || req.url.substring(1).startsWith('http:/'+req.headers.host))) {
-        res.setHeader('location', req.url.split('/'+req.headers.host).pop().replaceAll('//', '/'));
-        res.setHeader('content-length', 0);
-        res.writeHead(301);
-        res.end();
-        return;
-    }
-    var url=req.url,method=req.method,consumed=false;
-    if (url.split('?')[0] === '/postGet') {
-        url = await postGet(req, res);
-        if (url === null) {
-            return null;
-        }
-        method = 'GET';
-        consumed = true;
-    }
-    var a = processUrl(url, host, opts);
-    url = a.url;
-    args = a.args;
     var vc = args.vc, nc = args.nc;
     var reqBody;
     if (!consumed) {
@@ -221,7 +233,6 @@ function createHttpHeader(line, headers) {
 }
 
 server.on('upgrade', function(req, socket, head) {
-    console.log(req.url, 'upgrade')
     if (head && head.length) socket.unshift(head);
     socket.setTimeout(0);
     socket.setNoDelay(true);
@@ -229,11 +240,7 @@ server.on('upgrade', function(req, socket, head) {
     var newHeaders = {};
     var {hostname,pathname,search} = new URL('wss:/'+req.url);
     var headers = req.headers;
-    var opts = {};
-    if (req.headers.cookie && req.headers.cookie.includes('proxySettings=')) {
-        opts.site2Proxy = decodeURIComponent(req.headers.cookie.split('proxySettings=').pop().split(';')[0].split('_')[0]);
-        opts.isAbsoluteProxy = (req.headers.cookie.split('proxySettings=').pop().split(';')[0].split('_')[2] === '1');
-    }
+    var opts = getOpts(req.headers.cookie);
     if (headers) {
         for (var k in headers) {
             if (k.startsWith('x-replit') || k === 'accept-encoding') {
