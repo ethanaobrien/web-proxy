@@ -24,6 +24,10 @@ if (process.env.FORCE_SITE && typeof process.env.FORCE_SITE == 'string') {
 if (process.argv.includes('--site')) {
     global.forceSite = process.argv[process.argv.indexOf('--site')+1];
 }
+if (process.env.NOT_UP && typeof process.env.NOT_UP == 'string' && process.env.NOT_UP === 'TRUE') {
+    process.exit();
+    return;
+}
 
 let port = 3000;
 global.sites = [ //no '/' at end
