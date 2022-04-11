@@ -159,12 +159,11 @@ module.exports = {
         return Buffer.concat([Buffer.from(new Uint8Array([0xEF,0xBB,0xBF])), Buffer.from(body)]);
     },
     isNotGoodSite: function(url) {
-        var keywords = [
+        const keywords = [
             atob('cG9ybg=='),
             atob('c2V4'),
             atob('eHZpZGVvcw=='),
-            atob('ZnVjaw=='),
-            atob('YXNz')
+            atob('ZnVjaw==')
         ];
         for (var i=0; i<keywords.length; i++) {
             if (url.toLowerCase().includes(keywords[i])) {
@@ -172,6 +171,19 @@ module.exports = {
             }
         }
         return false;
+    },
+    createHttpHeader: function(line, headers) {
+        return Object.keys(headers).reduce(function(head, key) {
+            var value = headers[key];
+            if (!Array.isArray(value)) {
+                head.push(key + ': ' + value);
+                return head;
+            }
+            for (var i = 0; i < value.length; i++) {
+                head.push(key + ': ' + value[i]);
+            }
+            return head;
+        }, [line]).join('\r\n')+'\r\n\r\n';
     },
     processUrl: function(url, host, opts) {
         url = url.startsWith('/http') ? url.substring(1) : opts.site2Proxy+url;

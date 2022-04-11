@@ -9,12 +9,14 @@ global.torrent = require("./torrent.js");
 global.parseTextFile = require("./parseText.js");
 global.changeHtml = require("./changeHtml.js");
 global.hideTitle = require("./hideTitle.js");
+global.setupWebsocket = require("./websocket.js");
 var a = require("./utils.js");
 for (var k in a) {
     global[k] = a[k];
 }
 global.debug = false;
 global.allowAdultContent = true;
+let port = 3000;
 //if you want to force a site to proxy, put url here
 //leave empty if not. Will set the client to absolute proxy mode
 global.forceSite = '';
@@ -24,12 +26,14 @@ if (process.env.FORCE_SITE && typeof process.env.FORCE_SITE == 'string') {
 if (process.argv.includes('--site')) {
     global.forceSite = process.argv[process.argv.indexOf('--site')+1];
 }
-if (process.env.NOT_UP && typeof process.env.NOT_UP == 'string' && process.env.NOT_UP === 'TRUE') {
-    process.exit();
-    return;
+if (process.env.PORT && typeof process.env.PORT == 'number') {
+    port = process.env.PORT
+}
+if (process.argv.includes('--port')) {
+    global.forceSite = process.argv[process.argv.indexOf('--port')+1];
 }
 
-let port = 3000;
+
 global.sites = [ //no '/' at end
     //site, isBuggy, display_name
     ['http://mikudb.moe', false, 'mikudb'],
@@ -83,22 +87,24 @@ var server = http.createServer(async function(req, res) {
             opts.site2Proxy = opts.site2Proxy.substring(0, opts.site2Proxy.length-1);
         }
     }
-    var isNotGood = isNotGoodSite((new URL(url)).hostname);
-    if (isNotGood && !allowAdultContent) {
-        var body = bodyBuffer('<p>site blocked. Contact the site owner for more information</p>');
-        res.setHeader('content-type', 'text/html; chartset=utf-8');
-        res.setHeader('content-length', body.byteLength);
-        res.writeHead(200);
-        res.end(body);
-        return;
-    } else if (isNotGood && !opts.allowAdultContent) {
-        var body = bodyBuffer('<p>this site requires configuring to visit. </p><a href="/changeSiteToServe">Go here to change your settings</a>');
-        res.setHeader('content-type', 'text/html; chartset=utf-8');
-        res.setHeader('content-length', body.byteLength);
-        res.writeHead(200);
-        res.end(body);
-        return;
-    }
+    try {
+        var isNotGood = isNotGoodSite((new URL(url)).hostname);
+        if (isNotGood && !allowAdultContent) {
+            var body = bodyBuffer('<p>site blocked. Contact the site owner for more information</p>');
+            res.setHeader('content-type', 'text/html; chartset=utf-8');
+            res.setHeader('content-length', body.byteLength);
+            res.writeHead(200);
+            res.end(body);
+            return;
+        } else if (isNotGood && !opts.allowAdultContent) {
+            var body = bodyBuffer('<p>this site requires configuring to visit. </p><a href="/changeSiteToServe">Go here to change your settings</a>');
+            res.setHeader('content-type', 'text/html; chartset=utf-8');
+            res.setHeader('content-length', body.byteLength);
+            res.writeHead(200);
+            res.end(body);
+            return;
+        }
+    }catch(e){};
     if (req.url.split('?')[0] === '/hideTitle' && !consumed) {
         hideTitle(req, res, opts);
         return
@@ -176,7 +182,7 @@ var server = http.createServer(async function(req, res) {
         } else {
             body = resp.body;
         }
-        if (opts.site2Proxy === 'https://www.instagram.com' && resp.contentType.includes('javascript') && !url.includes('worker')) {
+        if (resp.contentType.includes('javascript') && !url.includes('worker')) {
             body+='\nif (typeof window !== undefined && typeof document !== undefined && !window.checkInterval) {window.checkInterval=setInterval(function(){document.querySelectorAll("svg").forEach(e => {if (e.attributes["aria-label"]&&e.attributes["aria-label"].textContent) {e.innerHTML = e.attributes["aria-label"].textContent}})}, 200)}';
         }
         body = bodyBuffer(body);
@@ -189,93 +195,7 @@ var server = http.createServer(async function(req, res) {
     }
 })
 
-
-function createHttpHeader(line, headers) {
-  return Object.keys(headers).reduce(function (head, key) {
-    var value = headers[key];
-
-    if (!Array.isArray(value)) {
-      head.push(key + ': ' + value);
-      return head;
-    }
-
-    for (var i = 0; i < value.length; i++) {
-      head.push(key + ': ' + value[i]);
-    }
-    return head;
-  }, [line])
-  .join('\r\n') + '\r\n\r\n';
-}
-
-server.on('upgrade', function(req, socket, head) {
-    if (head && head.length) socket.unshift(head);
-    socket.setTimeout(0);
-    socket.setNoDelay(true);
-    socket.setKeepAlive(true, 0);
-    var newHeaders = {};
-    var {hostname,pathname,search} = new URL('wss:/'+req.url);
-    var headers = req.headers;
-    var opts = getOpts(req.headers.cookie);
-    if (headers) {
-        for (var k in headers) {
-            if (k.startsWith('x-replit') || k === 'accept-encoding') {
-                continue;
-            }
-            if (k === 'cookie') {
-                var cookies = [];
-                var ck = headers[k].split(';');
-                for (var i=0; i<ck.length; i++) {
-                    if (ck[i].includes('proxySettings')) {
-                        continue;
-                    }
-                    var a = parseResCookie(ck[i], hostname, opts.isAbsoluteProxy);
-                    if (a !== null) {
-                        cookies.push(a);
-                    }
-                }
-                newHeaders[k] = cookies.join('; ');
-                continue;
-            }
-            if (headers[k].includes(hostname)) {
-                headers[k] = headers[k].replaceAll(headers[k].split('https://').pop().split('/')[0], opts.site2Proxy.split('://').pop())
-            }
-            newHeaders[k] = headers[k];
-        }
-    }
-    newHeaders['host'] = hostname;
-    var outgoing = {};
-    var origin = '';
-    if (req.headers.cookie && req.headers.cookie.includes('proxySettings=')) {
-        origin = opts.site2Proxy;
-    }
-    newHeaders['origin'] = origin;
-    var proxyReq = https.request('https:/'+req.url);
-    for (var k in newHeaders) {
-        proxyReq.setHeader(k, newHeaders[k]);
-    }
-    proxyReq.on('response', function(res) {
-        if (!res.upgrade) {
-            socket.write(createHttpHeader('HTTP/' + res.httpVersion + ' ' + res.statusCode + ' ' + res.statusMessage, res.headers));
-            res.pipe(socket);
-        }
-    })
-    proxyReq.on('error', function(e){});
-    proxyReq.on('upgrade', function(proxyRes, proxySocket, proxyHead){
-        if (proxyHead && proxyHead.length) proxySocket.unshift(proxyHead);
-        proxySocket.setTimeout(0);
-        proxySocket.setNoDelay(true);
-        proxySocket.setKeepAlive(true, 0);
-        proxySocket.on('end', function (e) {});
-        proxySocket.on('error', function(e) {})
-        socket.on('error', function(e) {})
-        socket.write(createHttpHeader('HTTP/1.1 101 Switching Protocols', proxyRes.headers));
-        proxySocket.pipe(socket);
-        socket.pipe(proxySocket);
-        server.emit('open', proxySocket);
-        server.emit('proxySocket', proxySocket);
-    });
-    proxyReq.end();
-})
+setupWebsocket(server);
 
 server.on('clientError', function (err, socket) {
     if (err.code === 'ECONNRESET' || !socket.writable) {
@@ -284,17 +204,17 @@ server.on('clientError', function (err, socket) {
     socket.end('HTTP/1.1 400 Bad Request\r\n\r\n');
 });
 server.on('listening', function() {
-    console.log('listening on port '+(process.env.PORT || port || 3000));
+    console.log('listening on port '+port);
 })
 function tryListen() {
-    console.log('trying to listen on port '+(process.env.PORT || port || 3000));
-    server.listen(process.env.PORT || port || 3000);
+    console.log('trying to listen on port '+port);
+    server.listen(port);
 }
 server.on('error', function(e) {
     if (e.code === 'EADDRINUSE') {
-        console.log('failed to listen on port '+(process.env.PORT || port || 3000));
+        console.log('failed to listen on port '+port);
         port++;
         tryListen();
     }
 })
-tryListen(port);
+tryListen();
