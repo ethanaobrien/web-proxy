@@ -27,11 +27,7 @@ if (process.argv.includes('--site')) {
     global.forceSite = process.argv[process.argv.indexOf('--site')+1];
 }
 if (process.env.PORT) {
-    if (typeof process.env.PORT == 'number') {
-        port = process.env.PORT;
-    } else if (isNaN(process.env.PORT)) {
-        port = parseInt(process.env.PORT);
-    }
+    port = process.env.PORT;
 }
 if (process.argv.includes('--port')) {
     global.forceSite = process.argv[process.argv.indexOf('--port')+1];
