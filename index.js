@@ -10,6 +10,7 @@ global.parseTextFile = require("./parseText.js");
 global.changeHtml = require("./changeHtml.js");
 global.hideTitle = require("./hideTitle.js");
 global.setupWebsocket = require("./websocket.js");
+global.urlShortener = require("./urlShortener.js");
 var a = require("./utils.js");
 for (var k in a) {
     global[k] = a[k];
@@ -56,7 +57,11 @@ var server = http.createServer(async function(req, res) {
     var url=req.url,method=req.method,consumed=false;
     if (req.url.split('?')[0] === '/torrentStream') {
         torrent(req, res);
-        return
+        return;
+    }
+    if (req.url.split('?')[0].toLowerCase().startsWith('/tinyurl')) {
+        urlShortener(req, res);
+        return;
     }
     if (req.url.split('?')[0] === '/changeSiteToServe') {
         changeHtml(req, res);
