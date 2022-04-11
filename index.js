@@ -29,6 +29,7 @@ if (process.argv.includes('--site')) {
 if (process.env.PORT && typeof process.env.PORT == 'number') {
     port = process.env.PORT
 }
+console.log(typeof process.env.PORT)
 if (process.argv.includes('--port')) {
     global.forceSite = process.argv[process.argv.indexOf('--port')+1];
 }
