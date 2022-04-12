@@ -38,7 +38,7 @@ module.exports = async function(req, res) {
     } else if (args.url && args.phrase) {
         res.setHeader('content-type', 'text/html; chartset=utf-8');
         global.urlCache[args.phrase] = args.url;
-        var html = '<html><head><title>Url Shortener</title><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><ul><br><h1>Url Shortened</h1><ul><h2><a href="/tinyurl/'+args.phrase+'">'+req.headers.host+'/tinyurl/'+args.phrase+'</a></h2><p>Share <a href="/tinyurl/'+args.phrase+'">this link</a>. valid for 10 minutes</ul</ul></body></html>';
+        var html = '<html><head><title>Url Shortener</title><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><ul><br><h1>Url Shortened</h1><ul><h2><a href="/tinyurl/'+args.phrase+'">'+req.headers.host+'/tinyurl/'+args.phrase+'</a></h2><p>Share <a href="/tinyurl/'+args.phrase+'">this link</a>. valid for 10 minutes</ul></ul></body></html>';
         html = bodyBuffer(html);
         res.setHeader('content-length', html.byteLength);
         res.end(html);

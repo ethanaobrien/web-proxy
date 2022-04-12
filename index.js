@@ -3,6 +3,7 @@ global.http = require('http');
 global.torrentStream = require('torrent-stream');
 global.JSZip = require("jszip");
 const {MIMETYPES} = require("./mime.js");
+const { transformArgs } = require('./utils.js');
 global.MIMETYPES = MIMETYPES;
 global.fetch = require("./fetch.js");
 global.torrent = require("./torrent.js");
@@ -52,11 +53,184 @@ global.sites = [ //no '/' at end
     ['https://www.webtoons.com', false, 'webtoons']
 ]
 
+async function getSigFunc(fetchOpts) {
+    var response = await fetch('GET', 'https://www.youtube.com/', fetchOpts[0], fetchOpts[1], fetchOpts[2], fetchOpts[3], true);
+    var body = response.body;
+    var a = body.split('base.js')[0];
+    var b = a.split('/s/player/').pop();
+    var ytBaseLink = 'https://www.youtube.com/s/player/' + b + 'base.js';
+    var a = await fetch('GET', ytBaseLink, fetchOpts[0], fetchOpts[1], fetchOpts[2], fetchOpts[3], true);
+    var body = a.body;
+    var func1 = body.split('a=a.split("")').pop().split('}')[0];
+    var mainFunc = eval('(function() {return function(a) {a=a.split("")'+func1+'}})();');
+    var varibaleName = func1.split('.')[0].split(';').pop();
+    var func1 = func1.replaceAll(varibaleName + '.', '');
+    var modules = func1.split(';');
+    for (var i=0; i<modules.length; i++) {
+        modules[i] = modules[i].split('(')[0];
+    };
+    modules.splice(modules.length-1, 1);
+    modules.splice(0, 1);
+    var a = [];
+    for (var i=0; i<modules.length; i++) {
+        if (! a.includes(modules[i])) {
+            a.push(modules[i]);
+        };
+    };
+    var p = {};
+    p.mainFunc = mainFunc;
+    p.varName = varibaleName;
+    for (var i=0; i<a.length; i++) {
+        var y = body.split(a[i] + ':function').pop().split('}')[0];
+        var c = 'function ' + y + '}';
+        p[a[i]] = eval('(function() {return '+c+'})();');
+    };
+    return p;
+};
+
+async function decryptURL(e, fetchOpts) {
+    if (! global['yt_decrypt_function_loaded']) {
+        var u = await getSigFunc(fetchOpts);
+        global[u.varName] = u;
+        global['yt_decrypt_function_loaded'] = true;
+        setTimeout(function() {
+            global['yt_decrypt_function_loaded'] = false;
+        }, 7200000) //refresh every 2 hours
+        global.decryptSig = u.mainFunc;
+    };
+    var url = e.split('&');
+    var a = {};
+    for (var i=0; i<url.length; i++) {
+        var b = url[i].split('=');
+        a[b[0]] = b[1];
+    };
+    a.s = decodeURIComponent(a.s);
+    a.url = decodeURIComponent(a.url);
+    return a.url + '&' + a.sp + '=' + decryptSig(a.s);
+};
+
+async function getYtUrls(req, res, v) {
+    var ytLink = 'https://www.youtube.com/watch?v='+v;
+    var opts = getOpts(req.headers.cookie);
+    if (!opts.site2Proxy) {
+        opts.site2Proxy = new URL('/', 'https://www.youtube.com');
+        opts.site2Proxy = opts.site2Proxy.toString();
+        if (opts.site2Proxy.endsWith('/')) {
+            opts.site2Proxy = opts.site2Proxy.substring(0, opts.site2Proxy.length-1);
+        }
+    }
+    var headers = {};
+    for (var k in req.headers) {
+        if (['content-length',
+             'cache-control',
+             'content-type'].includes(k)) continue;
+        headers[k] = req.headers[k];
+    }
+    var resp = await fetch('GET', ytLink, headers, null, opts, headers.host, true);
+    var fetchOpts = [headers, null, opts, headers.host];
+    try {
+        var scriptPt1 = resp.body.split('<script' + resp.body.split('var ytInitialPlayerResponse = ')[0].split('<script').pop() + 'var ytInitialPlayerResponse = ')[1].split('</script>')[0];
+        var info = eval('(function() {return ' + scriptPt1 + '})();');
+    } catch(e) {
+        end('error parsing data', res);
+        return null;
+    }
+    if (!info.streamingData) {
+        end('There are restrictions preventing us being able to get the video', res);
+        return null;
+    }
+    try {
+        var urls = info.streamingData.formats;
+        var adaptiveUrls = info.streamingData.adaptiveFormats;
+        var videoTitle = info.videoDetails.title;
+    } catch(e) {
+        end('error reading info details', res);
+        return null;
+    };
+    try {
+        var hasEncrypted = false;
+        for (var i=0; i<urls.length; i++) {
+            var a = urls[i].cipher || urls[i].signatureCipher;
+            if (a) {
+                var hasEncrypted = true;
+                urls[i].url = await decryptURL(a, fetchOpts);
+                delete urls[i].cipher;
+                delete urls[i].signatureCipher;
+            };
+        };
+        for (var i=0; i<adaptiveUrls.length; i++) {
+            var a = adaptiveUrls[i].cipher || adaptiveUrls[i].signatureCipher;
+            if (a) {
+                var hasEncrypted = true;
+                adaptiveUrls[i].url = await decryptURL(a, fetchOpts);
+                delete adaptiveUrls[i].cipher;
+                delete adaptiveUrls[i].signatureCipher;
+            };
+        };
+    } catch(e) {
+        end('error decrypting variables', res);
+        return null;
+    }
+    return {urls:urls, adaptiveUrls:adaptiveUrls, videoTitle:videoTitle};
+}
+
+async function yt(req, res) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    if (req.method.toLowerCase() === 'post') {
+        body = await consumeBody(req);
+        body = body.toString();
+        args = transformArgs('?'+body);
+    } else {
+        args = transformArgs(req.url);
+    }
+    var v;
+    if (args.video && args.video.includes('v=')) {
+        v = args.video.split('v=').pop().split('&')[0];
+    }
+    if (!v) {
+        var html = '<html><head><title>Youtube Downloader</title><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><ul><br><h1>Youtube Downloader</h1><ul><form action="" method="POST" autocomplete="off"><br><label for="video">Youtube Link: </label><input type="text" id="video" name="video"><br><br><input type="submit" value="Submit"></form><ul></ul></body></html>';
+        end(html, res, 'text/html; chartset=utf-8');
+        return;
+    }
+    var urls = await getYtUrls(req, res, v);
+    if (urls === null) {
+        return;
+    }
+    if (args.json) {
+        end(JSON.stringify(urls, null, 2), res, 'application/json');
+        return;
+    }
+    var {adaptiveUrls,urls,videoTitle} = urls;
+    var html = '<html><head><title>Youtube Downloader</title><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><ul><br><h1>YouTube Downloader</h1>\n<ul><h2>Title: ' + videoTitle + '</h2>\n';
+    for (var i=0; i<urls.length; i++) {
+        html += '<p>Quality: ' +urls[i].qualityLabel + '; fps: ' + urls[i].fps + '; Mimetype: ' +urls[i].mimeType.split(';')[0] + '; Url: <a target="_blank" href="' + urls[i].url + '">Open</a> <a target="_blank" href="' + urls[i].url + '&title=' +
+videoTitle.replaceAll(' ', '+') + '">Download</a></p>\n';
+    };
+    html += '\n<h2>No Audio</h2><ul>';
+    for (var i=0; i<adaptiveUrls.length; i++) {
+        if (adaptiveUrls[i].mimeType.split('/')[0] == 'video') {
+            html += '<p>Quality: ' + adaptiveUrls[i].qualityLabel + '; fps: ' + adaptiveUrls[i].fps + '; Mimetype: ' + adaptiveUrls[i].mimeType.split(';')[0] + '; Url: <a target="_blank" href="' + adaptiveUrls[i].url + '">Open</a></p>\n';
+        };
+    };
+    html += '</ul>\n<h2>Only Audio</h2><ul>';
+    for (var i=0; i<adaptiveUrls.length; i++) {
+        if (adaptiveUrls[i].mimeType.split('/')[0] == 'audio') {
+            html += '<p>Bitrate: ' + adaptiveUrls[i].bitrate + '; Mimetype: ' + adaptiveUrls[i].mimeType.split(';')[0] + '; Url: <a target="_blank" href="' + adaptiveUrls[i].url + '">Open</a></p>\n';
+        };
+    };
+    html += '</ul></ul></ul></body></html>';
+    end(html, res, 'text/html; chartset=utf-8');
+}
+
 var server = http.createServer(async function(req, res) {
     var host = req.headers.host;
     var url=req.url,method=req.method,consumed=false;
     if (req.url.split('?')[0] === '/torrentStream') {
         torrent(req, res);
+        return;
+    }
+    if (req.url.split('?')[0] === '/yt') {
+        yt(req, res);
         return;
     }
     if (req.url.split('?')[0].toLowerCase().startsWith('/tinyurl')) {

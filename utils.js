@@ -223,5 +223,13 @@ module.exports = {
             opts.allowAdultContent = (cookies.split('proxySettings=').pop().split(';')[0].split('_')[5] === '1');
         }
         return opts;
+    },
+    end: function(html, res, type) {
+        if (type) {
+            res.setHeader('content-type', type);
+        }
+        html = bodyBuffer(html);
+        res.setHeader('content-length', html.byteLength);
+        res.end(html);
     }
 }
