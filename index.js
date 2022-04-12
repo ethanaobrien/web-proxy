@@ -3,7 +3,6 @@ global.http = require('http');
 global.torrentStream = require('torrent-stream');
 global.JSZip = require("jszip");
 const {MIMETYPES} = require("./mime.js");
-const { transformArgs } = require('./utils.js');
 global.MIMETYPES = MIMETYPES;
 global.fetch = require("./fetch.js");
 global.torrent = require("./torrent.js");
@@ -122,7 +121,7 @@ async function getYtUrls(req, res, v) {
     var headers = {
         'Accept':'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         'Accept-Language':'en-US,en;q=0.8',
-        'User-Agent': (req.headers['user-agent'] || 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.110 Safari/537.36')
+        'User-Agent': 'Mozilla/5.0 (X11; CrOS x86_64 14526.69.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.82 Safari/537.36'
     };
     var resp = await fetch('GET', ytLink, headers, null, opts, req.headers.host, true);
     var fetchOpts = [headers, null, opts, req.headers.host];
