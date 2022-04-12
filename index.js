@@ -121,7 +121,6 @@ async function getYtUrls(req, res, v) {
     var resp = await fetch('GET', ytLink, {}, null, opts, 'sadrtfgyuh', true);
     var fetchOpts = [{}, null, opts, 'asdfghj'];
     try {
-        console.log(resp.body);
         var scriptPt1 = resp.body.split('<script' + resp.body.split('var ytInitialPlayerResponse = ')[0].split('<script').pop() + 'var ytInitialPlayerResponse = ')[1].split('</script>')[0];
         var info = eval('(function() {return ' + scriptPt1 + '})();');
     } catch(e) {
