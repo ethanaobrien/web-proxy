@@ -118,14 +118,10 @@ async function getYtUrls(req, res, v) {
             opts.site2Proxy = opts.site2Proxy.substring(0, opts.site2Proxy.length-1);
         }
     }
-    var headers = {
-        'Accept':'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language':'en-US,en;q=0.8',
-        'User-Agent': 'Mozilla/5.0 (X11; CrOS x86_64 14526.69.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.82 Safari/537.36'
-    };
-    var resp = await fetch('GET', ytLink, headers, null, opts, req.headers.host, true);
-    var fetchOpts = [headers, null, opts, req.headers.host];
+    var resp = await fetch('GET', ytLink, {}, null, opts, 'sadrtfgyuh', true);
+    var fetchOpts = [{}, null, opts, 'asdfghj'];
     try {
+        console.log(resp.body);
         var scriptPt1 = resp.body.split('<script' + resp.body.split('var ytInitialPlayerResponse = ')[0].split('<script').pop() + 'var ytInitialPlayerResponse = ')[1].split('</script>')[0];
         var info = eval('(function() {return ' + scriptPt1 + '})();');
     } catch(e) {
