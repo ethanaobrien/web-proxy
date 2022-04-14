@@ -72,6 +72,10 @@ async function yt(req, res) {
         end('error getting video urls', res);
         return;
     }
+    if (args.json) {
+        end(JSON.stringify(urls), res, 'application/json');
+        return;
+    }
     var {urls,video,audio,videoTitle} = urls;
     var html = '<html><head><title>Youtube Downloader</title><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><ul><br><h1>YouTube Downloader</h1>\n<ul><h2>Title: ' + videoTitle + '</h2>\n';
     for (var i=0; i<urls.length; i++) {
