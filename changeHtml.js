@@ -60,10 +60,10 @@ module.exports = async function(req, res) {
                         adultContent = true;
                     }
                     if (!error) {
-                        var b;
+                        var b;/*
                         while (b = await check4Redirects(args.custom)) {
                             args.custom = b;
-                        }
+                        }*/
                         var a = new URL(args.custom);
                         if (a.hostname.includes('127.0') || a.hostname.includes('192.168')) {
                             throw new Error('Cannot use local url');

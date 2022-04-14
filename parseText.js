@@ -27,9 +27,11 @@ module.exports = function(body, isHtml, isUrlEncoded, opts, url, reqHost, proxyJ
         .replaceNC('"'+hn2, '"'+reqHost)
         .replaceNC('discord', 'discordddd')
         .replaceNC('wss://', 'wss://'+reqHost+'/')
+        .replaceNC('integrity', 'integrityy')
+        .replaceNC('crossorigin', 'sadfghjj')
+        .replaceAll('magnet:?', '/torrentStream?stage=step1&magnet=')
         .replaceNC(btoa(site2Proxy), btoa(reqHost));
     if (isHtml) {
-        body = body.replaceNC('integrity=', 'sadfghj=').replaceAll('magnet:?', '/torrentStream?stage=step1&magnet=').replaceNC('crossorigin=', 'sadfghjj=');
         var a = body.split('src');
         for (var i=1; i<a.length; i++) {
             if (a[i].replaceAll(' ', '').replaceAll('"', '').replaceAll("'", '').trim().startsWith('=//')) {
@@ -120,12 +122,9 @@ module.exports = function(body, isHtml, isUrlEncoded, opts, url, reqHost, proxyJ
             }
             body = a.join('//');
         }
-        body = body.replaceAll('http://', '/http:/').replaceAll('https://', '/https:/'); //.replaceAll('http:\\/\\/', '/http:\\/\\/').replaceAll('https:\\/\\/', '/https:\\/\\/');
+        body = body.replaceAll('http://', '/http:/').replaceAll('https://', '/https:/');
         if (debug) {
             console.log('javascript parsing took '+(((new Date())-date)/1000)+' seconds');
-        }
-        if (site2Proxy.includes('youtube')) {
-            body = body.replaceNC('www.youtube.com', reqHost).replaceNC('youtube.com', reqHost).replaceNC('www.', '').replaceNC('!a.u.startsWith("local")', 'false');
         }
         return body.replaceAll('/https://', '/https://').replaceAll('/http://', '/https://')
     }
