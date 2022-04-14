@@ -80,6 +80,7 @@ module.exports = function(method, url, headers, body, opts, reqHost, forceText) 
                  (res.headers['content-type'].includes('javascript') ||
                   res.headers['content-type'].includes('html') ||
                   res.headers['content-type'].includes('json') ||
+                  res.headers['content-type'].includes('css') ||
                   res.headers['content-type'].includes('x-www-form-urlencoded')))) && forceText !== true) {
                 resolve({
                     isString: false,

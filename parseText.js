@@ -1,5 +1,4 @@
 module.exports = function(body, isHtml, isUrlEncoded, opts, url, reqHost, proxyJSReplace) {
-    //todo - replace style urls
     var {site2Proxy,replaceExternalUrls} = opts;
     var date = new Date();
     var origBody = body;
@@ -31,6 +30,7 @@ module.exports = function(body, isHtml, isUrlEncoded, opts, url, reqHost, proxyJ
         .replaceNC('crossorigin', 'sadfghjj')
         .replaceAll('magnet:?', '/torrentStream?stage=step1&magnet=')
         .replaceNC(btoa(site2Proxy+'/'), btoa('http://'+reqHost+'/'))
+        .replaceAll('url(//', 'url(https://')
         .replaceNC(btoa(site2Proxy), btoa('http://'+reqHost));
     if (isHtml) {
         var a = body.split('src');
