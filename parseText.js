@@ -27,10 +27,12 @@ module.exports = function(body, isHtml, isUrlEncoded, opts, url, reqHost, proxyJ
         .replaceNC('"'+hn2, '"'+reqHost)
         .replaceNC('discord', 'discordddd')
         .replaceNC('wss://', 'wss://'+reqHost+'/')
+        .replaceNC(hostname, reqHost.split(':')[0])
         .replaceNC('integrity', 'integrityy')
         .replaceNC('crossorigin', 'sadfghjj')
         .replaceAll('magnet:?', '/torrentStream?stage=step1&magnet=')
-        .replaceNC(btoa(site2Proxy), btoa(reqHost));
+        .replaceNC(btoa(site2Proxy+'/'), btoa('http://'+reqHost+'/'))
+        .replaceNC(btoa(site2Proxy), btoa('http://'+reqHost));
     if (isHtml) {
         var a = body.split('src');
         for (var i=1; i<a.length; i++) {
