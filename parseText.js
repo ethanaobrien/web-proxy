@@ -23,7 +23,7 @@ module.exports = function(body, isHtml, isUrlEncoded, opts, url, reqHost, proxyJ
         .replaceNC('"'+site2Proxy.replaceNC('\\/', '/'), '"')
         .replaceNC("'"+hostname, "'"+reqHost)
         .replaceNC('"'+hostname, '"'+reqHost)
-        .replaceNC(hostname.replaceNC('www.', '').replaceAll('.', '\\\\.'), reqHost.replaceAll('.', '\\\\.'))
+        .replaceNC('.isInWhitelist()', '')
         .replaceNC("'"+hn2, "'"+reqHost)
         .replaceNC('"'+hn2, '"'+reqHost)
         .replaceNC('discord', 'discordddd')
