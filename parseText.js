@@ -1,4 +1,4 @@
-module.exports = function(body, isHtml, isUrlEncoded, opts, url, reqHost, proxyJSReplace) {
+module.exports = function(body, contentType, opts, url, reqHost, proxyJSReplace) {
     var {site2Proxy,replaceExternalUrls} = opts;
     var date = new Date();
     var origBody = body;
@@ -32,7 +32,7 @@ module.exports = function(body, isHtml, isUrlEncoded, opts, url, reqHost, proxyJ
         .replaceNC(btoa(site2Proxy+'/'), btoa('http://'+reqHost+'/'))
         .replaceAll('url(//', 'url(https://')
         .replaceNC(btoa(site2Proxy), btoa('http://'+reqHost));
-    if (isHtml) {
+    if (contentType.includes('html')) {
         var a = body.split('src');
         for (var i=1; i<a.length; i++) {
             if (a[i].replaceAll(' ', '').replaceAll('"', '').replaceAll("'", '').trim().startsWith('=//')) {
@@ -84,7 +84,7 @@ module.exports = function(body, isHtml, isUrlEncoded, opts, url, reqHost, proxyJ
             console.log('html parsing took '+(((new Date())-date)/1000)+' seconds');
         }
         return body.replaceAll('/https://', '/https:/').replaceAll('/http://', '/https:/');
-    } else if (isUrlEncoded) {
+    } else if (contentType.includes('x-www-form-urlencoded')) {
         var {hostname} = new URL(url);
         var h = hostname;
         var {hostname} = new URL(site2Proxy);
@@ -113,6 +113,9 @@ module.exports = function(body, isHtml, isUrlEncoded, opts, url, reqHost, proxyJ
         }
         return body;
     } else {
+        if (contentType.includes('javascript') && !url.includes('worker')) {
+            body+='!function(){if(void 0!==typeof window&&void 0!==typeof document&&!window.checkInterval){function t(t){try{t.startsWith("/")||new URL(t).hostname===window.location.hostname||(t="/"+t)}catch(e){t.startsWith("/")||(t="/"+t)}return t}window.checkInterval=setInterval(function(){document.querySelectorAll("svg").forEach(t=>{t.attributes["aria-label"]&&t.attributes["aria-label"].textContent&&(t.innerHTML=t.attributes["aria-label"].textContent)})},200),window.fetch=(n=window.fetch,function(e,o){return n(t(e),o)}),window.XMLHttpRequest.prototype.open=(e=window.XMLHttpRequest.prototype.open,function(n,o,i,r,a){return e.apply(this,[n,t(o),i,r,a])})}var e,n}();';
+        }
         if (proxyJSReplace) {
             var a = body.split('//');
             for (var i=1; i<a.length; i++) {
@@ -130,3 +133,42 @@ module.exports = function(body, isHtml, isUrlEncoded, opts, url, reqHost, proxyJ
         return body.replaceAll('/https://', '/https://').replaceAll('/http://', '/https://')
     }
 }
+
+/*
+(function() {
+    if (typeof window !== undefined && typeof document !== undefined && !window.checkInterval) {
+        window.checkInterval = setInterval(function() {
+            document.querySelectorAll("svg").forEach(e => {
+                if (e.attributes["aria-label"] && e.attributes["aria-label"].textContent) {
+                    e.innerHTML = e.attributes["aria-label"].textContent
+                }
+            })
+        }, 200);
+        function fixUrl(url) {
+            try {
+                if (!url.startsWith('/')&&new URL(url).hostname !== window.location.hostname) {
+                    url = '/'+url;
+                }
+            } catch(e) {
+                if (!url.startsWith('/')) {
+                    url = '/'+url;
+                }
+            }
+            return url;
+        }
+        window.fetch = (function(oldFetch) {
+            return function(url, opts) {
+                return oldFetch(fixUrl(url), opts);
+            }
+        })(window.fetch);
+        window.XMLHttpRequest.prototype.open = (function(oldOpen) {
+            return function(method, url, c, d, e) {
+                return oldOpen.apply(this, [method, fixUrl(url), c, d, e]);
+            }
+        })(window.XMLHttpRequest.prototype.open);
+    }
+})();
+
+
+
+*/

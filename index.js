@@ -175,7 +175,7 @@ var server = http.createServer(async function(req, res) {
     if (!consumed) {
         reqBody = await consumeBody(req);
         if (req.headers['content-type'] && req.headers['content-type'].includes('x-www-form-urlencoded')) {
-            reqBody = Buffer.from(parseTextFile(reqBody.toString(), false, true, opts, url, host, false));
+            reqBody = Buffer.from(parseTextFile(reqBody.toString(), 'x-www-form-urlencoded', opts, url, host, false));
         }
     }
     try {
@@ -229,12 +229,9 @@ var server = http.createServer(async function(req, res) {
         //javascript/html parsing
         var body = '';
         if (!nc || (nc != '1' && nc != 'true')) {
-            body = parseTextFile(resp.body, resp.contentType.includes('html'), resp.contentType.includes('x-www-form-urlencoded'), opts, url, host, opts.proxyJSReplace);
+            body = parseTextFile(resp.body, resp.contentType, opts, url, host, opts.proxyJSReplace);
         } else {
             body = resp.body;
-        }
-        if (resp.contentType.includes('javascript') && !url.includes('worker')) {
-            body+='\nif (typeof window !== undefined && typeof document !== undefined && !window.checkInterval) {window.checkInterval=setInterval(function(){document.querySelectorAll("svg").forEach(e => {if (e.attributes["aria-label"]&&e.attributes["aria-label"].textContent) {e.innerHTML = e.attributes["aria-label"].textContent}})}, 200)}';
         }
         body = bodyBuffer(body);
         res.setHeader('content-length', body.byteLength);

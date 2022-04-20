@@ -6,11 +6,21 @@ module.exports = function(req, res) {
     }
     res.writeContinue();
     res.setHeader('Access-Control-Allow-Origin', '*');
-    var args = transformArgs(req.url.split('magnet=')[0]);
+    var args = transformArgs(req.url);
     var stage = args.stage;
-    var magnet = req.url.split('magnet=').pop();
+    if (!stage) {
+        stage = 'step1';
+    }
+    if (req.url.split('magnet=').pop().split('&')[0].includes('=')) {
+        res.setHeader('location', req.url.split('magnet=')[0]+'magnet='+encodeURIComponent(req.url.split('magnet=').pop().split('&')[0]));
+        res.setHeader('content-length', 0);
+        res.writeHead(301);
+        res.end();
+        return;
+    }
+    var magnet = encodeURIComponent(args.magnet);
     try {
-        var engine = torrentStream('magnet:?'+magnet);
+        var engine = torrentStream('magnet:?'+decodeURIComponent(magnet));
     } catch(e) {
         res.end('error getting torrent metedata');
         return;
@@ -137,6 +147,9 @@ module.exports = function(req, res) {
         } else if (stage === 'dlAsZip') {
             var zip = new JSZip();
             for (var i=0; i<files.length; i++) {
+                if (args.directory2DL && !files[i].path.startsWith(args.directory2DL)) {
+                    continue;
+                }
                 zip.file(files[i].path, files[i].createReadStream())
             }
             res.setHeader('content-type', 'application/zip');

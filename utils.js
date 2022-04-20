@@ -118,36 +118,59 @@ module.exports = {
         }
         return processFiles(result)
     },
-    generateTorrentTree: function(files, magnet) {
-        var paths = [];
-        for (var i=0; i<files.length; i++) {
-            paths.push(files[i].path);
-        }
+    fileTree: function(paths) {
         var result = [];
         var level = {result};
-        paths.forEach(path => {
+        paths.forEach(info => {
+            var size = info.size;
+            path = info.path;
             path.split('/').reduce((r, name, i, a) => {
                 if(!r[name]) {
                     r[name] = {result: []};
-                    r.result.push({name, children: r[name].result, fullPath:path})
+                    r.result.push({name, children: r[name].result, path, size:size})
                 }
                 return r[name];
             }, level)
         })
+        function process(a) {
+            for (var i=0; i<a.length; i++) {
+                if (a[i].children.length > 0) {
+                    a[i].isFile = false;
+                    a[i].isDirectory = true;
+                    a[i].children = process(a[i].children);
+                    a[i].path = a[i].path.substring(0, a[i].path.length-a[i].path.split('/').pop().length);
+                    delete a[i].size;
+                } else {
+                    a[i].isFile = true;
+                    a[i].isDirectory = false;
+                    delete a[i].children;
+                }
+            }
+            return a;
+        }
+        return process(result);
+    },
+    generateTorrentTree: function(files, magnet) {
+        var paths = [];
+        for (var i=0; i<files.length; i++) {
+            paths.push({path:files[i].path,size:files[i].length});
+        }
+        var result = fileTree(paths);
         var out = '<style>ul,#myUL{list-style-type:none}#myUL{margin:0;padding:0}.caret{cursor:pointer;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none}.caret::before{content:"\\25B6";color:#000;display:inline-block;margin-right:6px}.caret-down::before{-ms-transform:rotate(90deg);-webkit-transform:rotate(90deg);transform:rotate(90deg)}.nested{display:none}.active{display:block}</style><ul id="myUL">';
         function processFiles(a) {
             a = a.sort(function(a, b) {
                 return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
             });
             for (var i=0; i<a.length; i++) {
-                if (a[i].children.length > 0) {
-                    out += '<li><span class="caret">'+a[i].name+'</span><ul class="nested">';
+                if (a[i].isDirectory) {
+                    var q = '/torrentStream?stage=dlAsZip&directory2DL='+a[i].path+'&magnet='+magnet
+                    out += '<li><span class="caret">'+a[i].name+'</span> (<a href="'+q+'">download</a>)<ul class="nested">';
                     processFiles(a[i].children);
-                    out += '</ul></li>'
+                    out += '</ul></li>';
                 } else {
-                    var downloadUrl = '/torrentStream?fileName='+encodeURIComponent(a[i].fullPath)+'&stage=step2&stream=on&fetchFile=no&magnet='+magnet;
-                    var downloadUrl2 = '/torrentStream?fileName='+encodeURIComponent(a[i].fullPath)+'&stage=step2&magnet='+magnet;
-                    out += '<li><a style="text-decoration:none" href="'+downloadUrl+'">'+a[i].name+'</a> - <a style="text-decoration:none" href="'+downloadUrl2+'">download</a></li>';
+                    var downloadUrl = '/torrentStream?fileName='+encodeURIComponent(a[i].path)+'&stage=step2&stream=on&fetchFile=no&magnet='+magnet;
+                    var downloadUrl2 = '/torrentStream?fileName='+encodeURIComponent(a[i].path)+'&stage=step2&magnet='+magnet;
+                    out += '<li><a style="text-decoration:none" href="'+downloadUrl+'">'+a[i].name+'</a> - <a style="text-decoration:none" href="'+downloadUrl2+'">download</a> ('+a[i].size+')</li>';
                 }
             }
         }
