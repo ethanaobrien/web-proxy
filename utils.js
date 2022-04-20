@@ -170,7 +170,7 @@ module.exports = {
                 } else {
                     var downloadUrl = '/torrentStream?fileName='+encodeURIComponent(a[i].path)+'&stage=step2&stream=on&fetchFile=no&magnet='+magnet;
                     var downloadUrl2 = '/torrentStream?fileName='+encodeURIComponent(a[i].path)+'&stage=step2&magnet='+magnet;
-                    out += '<li><a style="text-decoration:none" href="'+downloadUrl+'">'+a[i].name+'</a> - <a style="text-decoration:none" href="'+downloadUrl2+'">download</a> ('+a[i].size+')</li>';
+                    out += '<li><a style="text-decoration:none" href="'+downloadUrl+'">'+a[i].name+'</a> - <a style="text-decoration:none" href="'+downloadUrl2+'">download</a> ('+humanFileSize(a[i].size)+')</li>';
                 }
             }
         }
@@ -234,6 +234,24 @@ module.exports = {
         url=url.replaceAll('https%3A%2F%2F%2F', '')
             .replaceAll('https%3A%2F'+host, 'https%3A%2F%2F'+host);
         return {args:args, url:url};
+    },
+    humanFileSize: function(bytes) {
+        if (! bytes) {
+            return '';
+        }
+        //from https://stackoverflow.com/questions/10420352/converting-file-size-in-bytes-to-human-readable-string/10420404
+        const thresh = 1024;
+        if (Math.abs(bytes) < thresh) {
+          return bytes + ' B';
+        }
+        const units = ['KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB'];
+        let u = -1;
+        const r = 10;
+        do {
+          bytes /= thresh;
+          ++u;
+        } while (Math.round(Math.abs(bytes) * r) / r >= thresh && u < units.length - 1);
+        return bytes.toFixed(1) + ' ' + units[u];
     },
     getOpts: function(cookies) {
         var opts = {};
