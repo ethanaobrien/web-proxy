@@ -77,11 +77,15 @@ module.exports = function(req, res) {
                     html += ' frameBorder="0" height="75%"';
                 }
                 html += ' id="element" src="'+downloadUrl+'"></'+tagName+'>';
+                var nb = getConcurentFiles(file.path, files, magnet);
                 if (['video', 'audio'].includes(ct)) {
-                    html += '<script>var element = document.getElementById("element");var errCt=0;function err(e){if(errCt>25){return};errCt++;var a=element.src;element.src=a;element.play()};element.addEventListener("abort", err);element.addEventListener("error", err);element.play();</script>';
+                    html += '<script>var element = document.getElementById("element");var errCt=0;function err(e){if(errCt>25){return};errCt++;var a=element.src;element.src=a;element.play()};element.addEventListener("abort", err);element.addEventListener("error", err);element.play();';
+                    if (nb && nb[1] && ['audio', 'video'].includes(MIMETYPES[nb[1].split('.').pop()].split('/')[0])) {
+                        html += 'element.addEventListener("ended", function(e) {document.getElementById("next").click()});'
+                    }
+                    html += '</script>';
                 }
                 html += '<h2>'+file.name+'</h2><br>';
-                var nb = getConcurentFiles(file.path, files, magnet);
                 if (nb) {
                     if (nb[0]) {
                         html += '<a href="'+nb[0]+'" class="previous nb">&laquo; Previous</a>';
@@ -90,7 +94,7 @@ module.exports = function(req, res) {
                         html += ' ';
                     }
                     if (nb[1]) {
-                        html += '<a href="'+nb[1]+'" class="next nb">Next &raquo;</a>';
+                        html += '<a href="'+nb[1]+'" class="next nb" id="next">Next &raquo;</a>';
                     }
                 }
                 html += '</center><br><ul>';

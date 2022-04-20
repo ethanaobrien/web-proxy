@@ -132,6 +132,17 @@ module.exports = {
                 return r[name];
             }, level)
         })
+        function folderSizes(a) {
+            var size = 0;
+            for (var i=0; i<a.length; i++) {
+                if (a[i].isFile) {
+                    size += a[i].size;
+                } else {
+                    size += folderSizes(a[i].children);
+                }
+            }
+            return size;
+        }
         function process(a) {
             for (var i=0; i<a.length; i++) {
                 if (a[i].children.length > 0) {
@@ -139,7 +150,7 @@ module.exports = {
                     a[i].isDirectory = true;
                     a[i].children = process(a[i].children);
                     a[i].path = a[i].path.substring(0, a[i].path.length-a[i].path.split('/').pop().length);
-                    delete a[i].size;
+                    a[i].size = folderSizes(a[i].children);
                 } else {
                     a[i].isFile = true;
                     a[i].isDirectory = false;
@@ -164,7 +175,7 @@ module.exports = {
             for (var i=0; i<a.length; i++) {
                 if (a[i].isDirectory) {
                     var q = '/torrentStream?stage=dlAsZip&directory2DL='+a[i].path+'&magnet='+magnet
-                    out += '<li><span class="caret">'+a[i].name+'</span> (<a href="'+q+'">download</a>)<ul class="nested">';
+                    out += '<li><span class="caret">'+a[i].name+'</span> (<a href="'+q+'">download</a>) ('+humanFileSize(a[i].size)+')<ul class="nested">';
                     processFiles(a[i].children);
                     out += '</ul></li>';
                 } else {
