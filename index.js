@@ -213,7 +213,7 @@ var server = http.createServer(async function(req, res) {
             continue;
         }
         if (resp.headers[k].startsWith('//')) {
-            resp.headers[k] = resp.headers[k].replaceAll('//', 'https://');
+            resp.headers[k] = 'https:'+resp.headers[k];
         }
         if (typeof resp.headers[k] == 'string') {
             res.setHeader(k, resp.headers[k].replaceAll(opts.site2Proxy+'/', '/').replaceAll(opts.site2Proxy, '').replaceAll('http', '/http'));
