@@ -12,7 +12,7 @@ module.exports = function(req, res) {
         stage = 'step1';
     }
     if (req.url.split('magnet=').pop().split('&')[0].includes('=')) {
-        res.setHeader('location', req.url.split('magnet=')[0]+'magnet='+encodeURIComponent(req.url.split('magnet=').pop().split('&')[0]));
+        res.setHeader('location', req.url.split('magnet=')[0]+'magnet='+encodeURIComponent(req.url.split('magnet=').pop()));
         res.setHeader('content-length', 0);
         res.writeHead(301);
         res.end();
@@ -20,7 +20,7 @@ module.exports = function(req, res) {
     }
     var magnet = encodeURIComponent(args.magnet);
     try {
-        var engine = torrentStream('magnet:?'+decodeURIComponent(magnet));
+        var engine = torrentStream('magnet:?'+args.magnet);
     } catch(e) {
         res.end('error getting torrent metedata');
         return;
@@ -80,8 +80,11 @@ module.exports = function(req, res) {
                 var nb = getConcurentFiles(file.path, files, magnet);
                 if (['video', 'audio'].includes(ct)) {
                     html += '<script>var element = document.getElementById("element");var errCt=0;function err(e){if(errCt>25){return};errCt++;var a=element.src;element.src=a;element.play()};element.addEventListener("abort", err);element.addEventListener("error", err);element.play();';
-                    if (nb && nb[1] && ['audio', 'video'].includes(MIMETYPES[nb[1].split('.').pop()].split('/')[0])) {
-                        html += 'element.addEventListener("ended", function(e) {document.getElementById("next").click()});'
+                    if (nb && nb[1]) {
+                        var name = transformArgs(nb[1]).fileName;
+                        if (name && MIMETYPES[name.split('.').pop()] && ['audio', 'video'].includes(MIMETYPES[name.split('.').pop()].split('/')[0])) {
+                            html += 'element.addEventListener("ended", function(e) {document.getElementById("next").click()});'
+                        }
                     }
                     html += '</script>';
                 }
