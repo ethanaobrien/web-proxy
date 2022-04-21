@@ -276,12 +276,19 @@ module.exports = {
         }
         return opts;
     },
-    end: function(html, res, type) {
+    end: function(html, res, type, code) {
         if (type) {
             res.setHeader('content-type', type);
         }
         html = bodyBuffer(html);
         res.setHeader('content-length', html.byteLength);
+        res.writeHead(code || 200);
         res.end(html);
+    },
+    redirect: function(url, res, type) {
+        res.setHeader('location', url);
+        res.setHeader('content-length', 0);
+        res.writeHead(type);
+        res.end();
     }
 }

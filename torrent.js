@@ -12,10 +12,7 @@ module.exports = function(req, res) {
         stage = 'step1';
     }
     if (req.url.split('magnet=').pop().split('&')[0].includes('=')) {
-        res.setHeader('location', req.url.split('magnet=')[0]+'magnet='+encodeURIComponent(req.url.split('magnet=').pop()));
-        res.setHeader('content-length', 0);
-        res.writeHead(301);
-        res.end();
+        redirect(req.url.split('magnet=')[0]+'magnet='+encodeURIComponent(req.url.split('magnet=').pop()), res, 301);
         return;
     }
     var magnet = encodeURIComponent(args.magnet);
@@ -27,7 +24,7 @@ module.exports = function(req, res) {
     }
     var ready = setTimeout(function() {
         engine.destroy();
-        res.end('timeout getting torrent metedata');
+        end('timeout getting torrent metedata', res, undefined, 500);
     }, 20000);
     engine.on('ready', function () {
         clearTimeout(ready);
@@ -40,11 +37,7 @@ module.exports = function(req, res) {
             var downloadUrl2 = '/torrentStream?stage=dlAsZip&magnet='+magnet;
             html += '<br><a style="text-decoration:none" href="'+downloadUrl2+'">Download All As Zip</a></ul><br></body></html>';
             engine.destroy();
-            res.setHeader('content-type', 'text/html; chartset=utf-8');
-            html = bodyBuffer(html);
-            res.setHeader('content-length', html.byteLength);
-            res.writeHead(200);
-            res.end(html);
+            end(html, res, 'text/html; chartset=utf-8');
         } else if (stage === 'step2') {
             var fileName = args.fileName;
             var file;
@@ -55,8 +48,7 @@ module.exports = function(req, res) {
                 }
             }
             if (! file) {
-                res.writeHead(500);
-                res.end('error finding file');
+                end('error finding file', res, undefined, 500);
                 engine.destroy();
                 return;
             }
@@ -64,7 +56,6 @@ module.exports = function(req, res) {
             if (args.stream === 'on' && args.fetchFile === 'no') {
                 var downloadUrl = '/torrentStream?fileName='+encodeURIComponent(file.path)+'&stage=step2&stream=on&magnet='+magnet;
                 var tagName = ['video', 'audio'].includes(ct) ? ct : ('image' === ct ? 'img' : 'iframe');
-                res.setHeader('content-type', 'text/html; chartset=utf-8');
                 var html = '<html><head><style>.nb{text-decoration:none;display:inline-block;padding:8px 16px;border-radius:12px;transition:0.35s;color:black;}.previous{background-color:#00b512;}.previous:hover{background-color:#ee00ff;}.next{background-color:#ffa600;}.next:hover{background-color:#0099ff;}</style><meta name="viewport" content="width=device-width, initial-scale=1"><title>'+file.name+'</title></head><body><br><br><br><center>';
                 html += ('<'+tagName);
                 if (['video', 'image'].includes(ct)) {
@@ -103,10 +94,7 @@ module.exports = function(req, res) {
                 html += '</center><br><ul>';
                 html += generateTorrentTree(files, magnet);
                 html += '</ul><br><br></body></html>';
-                html = bodyBuffer(html);
-                res.setHeader('content-length', html.byteLength);
-                res.writeHead(200);
-                res.end(html);
+                end(html, res, 'text/html; chartset=utf-8');
                 return;
             }
             res.setHeader('content-length', file.length);
@@ -120,35 +108,36 @@ module.exports = function(req, res) {
             } else {
                 res.setHeader('Content-Disposition', 'attachment; filename="'+encodeURIComponent(fileName)+'"');
             }
+            var code;
             if (req.headers['range']) {
-                console.log('range request')
+                console.log('range request');
                 var range = req.headers['range'].split('=')[1].trim();
                 var rparts = range.split('-');
                 if (! rparts[1]) {
                     fileOffset = parseInt(rparts[0]);
-                    var fileEndOffset = file.length - 1;
+                    fileEndOffset = file.length - 1;
                     res.setHeader('content-length', file.length-fileOffset);
                     res.setHeader('content-range','bytes '+fileOffset+'-'+(file.length-1)+'/'+file.length);
-                    if (fileOffset == 0) {
-                        res.writeHead(200);
-                    } else {
-                        res.writeHead(206);
-                    }
+                    code = ((fileOffset === 0) ? 200 : 206);
                 } else {
                     fileOffset = parseInt(rparts[0]);
                     fileEndOffset = parseInt(rparts[1])
                     res.setHeader('content-length', fileEndOffset - fileOffset + 1);
                     res.setHeader('content-range','bytes '+fileOffset+'-'+(fileEndOffset)+'/'+file.length)
-                    res.writeHead(206);
+                    code = 206;
                 }
             } else {
                 fileOffset = 0;
                 fileEndOffset = file.length - 1;
-                res.writeHead(200);
+                code = 200;
             }
+            res.writeHead(code);
             var stream = file.createReadStream({start: fileOffset,end: fileEndOffset});
             stream.pipe(res);
             stream.on('finish', function() {
+                engine.destroy();
+            })
+            req.on("close", function() {
                 engine.destroy();
             })
         } else if (stage === 'dlAsZip') {
@@ -167,8 +156,11 @@ module.exports = function(req, res) {
             stream.on('finish', function() {
                 engine.destroy();
             })
+            req.on("close", function() {
+                engine.destroy();
+            })
         } else {
-            res.end('invalid request');
+            end('invalid request', res, undefined, 400);
             engine.destroy();
         }
     })
