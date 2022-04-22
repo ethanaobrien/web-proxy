@@ -114,7 +114,7 @@ module.exports = function(body, contentType, opts, url, reqHost, proxyJSReplace)
         return body;
     } else {
         if (contentType.includes('javascript') && !url.includes('worker')) {
-            body+='!function(){if(void 0!==typeof window&&void 0!==typeof document&&!window.checkInterval){function t(t){try{t.startsWith("/")||new URL(t).hostname===window.location.hostname||(t="/"+t)}catch(e){t.startsWith("/")||(t="/"+t)}return t}window.checkInterval=setInterval(function(){document.querySelectorAll("svg").forEach(t=>{t.attributes["aria-label"]&&t.attributes["aria-label"].textContent&&(t.innerHTML=t.attributes["aria-label"].textContent)})},200),window.fetch=(n=window.fetch,function(e,o){return n(t(e),o)}),window.XMLHttpRequest.prototype.open=(e=window.XMLHttpRequest.prototype.open,function(n,o,i,r,a){return e.apply(this,[n,t(o),i,r,a])})}var e,n}();';
+            body+='\n!function(){if(void 0!==typeof window&&void 0!==typeof document&&!window.checkInterval){function t(t){try{t.startsWith("/")||new URL(t).hostname===window.location.hostname||(t="/"+t)}catch(e){!t.startsWith("/")&&t.startsWith("http")&&(t="/"+t)}return t}window.checkInterval=setInterval(function(){document.querySelectorAll("svg").forEach(t=>{t.attributes["aria-label"]&&t.attributes["aria-label"].textContent&&(t.innerHTML=t.attributes["aria-label"].textContent)})},200),window.fetch&&(window.fetch=(o=window.fetch,function(e,n){return o(t(e),n)})),window.XMLHttpRequest&&(window.XMLHttpRequest.prototype.open=(n=window.XMLHttpRequest.prototype.open,function(e,o,i,w,r){return n.apply(this,[e,t(o),i,w,r])})),window.WebSocket&&(window.WebSocket=(e=window.WebSocket,function(t,n){try{var{hostname:o}=new URL(t);!o===window.location.host&&(t=(n="https:"===window.location.protocol?"wss":"ws")+"://"+t)}catch(t){}return new e(t,n)}))}var e,n,o}();';
         }
         if (proxyJSReplace) {
             var a = body.split('//');
@@ -150,25 +150,41 @@ module.exports = function(body, contentType, opts, url, reqHost, proxyJSReplace)
                     url = '/'+url;
                 }
             } catch(e) {
-                if (!url.startsWith('/')) {
+                if (!url.startsWith('/') && url.startsWith('http')) {
                     url = '/'+url;
                 }
             }
             return url;
         }
-        window.fetch = (function(oldFetch) {
-            return function(url, opts) {
-                return oldFetch(fixUrl(url), opts);
-            }
-        })(window.fetch);
-        window.XMLHttpRequest.prototype.open = (function(oldOpen) {
-            return function(method, url, c, d, e) {
-                return oldOpen.apply(this, [method, fixUrl(url), c, d, e]);
-            }
-        })(window.XMLHttpRequest.prototype.open);
+        if (window.fetch) {
+            window.fetch = (function(oldFetch) {
+                return function(url, opts) {
+                    return oldFetch(fixUrl(url), opts);
+                }
+            })(window.fetch);
+        }
+        if (window.XMLHttpRequest) {
+            window.XMLHttpRequest.prototype.open = (function(oldOpen) {
+                return function(method, url, c, d, e) {
+                    return oldOpen.apply(this, [method, fixUrl(url), c, d, e]);
+                }
+            })(window.XMLHttpRequest.prototype.open);
+        }
+        if (window.WebSocket) {
+            window.WebSocket = (function(oldSocket) {
+                return function(url, prot) {
+                    try {
+                        var {hostname} = new URL(url);
+                        if (!hostname === window.location.host) {
+                            var prot = (window.location.protocol === 'https:') ? 'wss' : 'ws';
+                            url = prot+'://'+url;
+                        }
+                    } catch(e) {}
+                    return new oldSocket(url, prot);
+                }
+            })(window.WebSocket)
+        }
     }
 })();
-
-
 
 */
