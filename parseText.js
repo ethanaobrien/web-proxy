@@ -12,6 +12,8 @@ module.exports = function(body, contentType, opts, url, reqHost, proxyJSReplace)
         startUrl = startUrl.substring(0, startUrl.length-1);
     }
     body = body
+        .replaceNC(site2Proxy.split('://').pop(), reqHost)
+        .replaceNC(site2Proxy.split('://').pop(), reqHost)
         .replaceNC('"'+site2Proxy+'/', '"'+startUrl+'/')
         .replaceNC("'"+site2Proxy+'/', '\''+startUrl+'/')
         .replaceNC("'"+site2Proxy, '\''+startUrl+'')
@@ -113,9 +115,6 @@ module.exports = function(body, contentType, opts, url, reqHost, proxyJSReplace)
         }
         return body;
     } else {
-        if (contentType.includes('javascript') && !url.includes('worker')) {
-            body+='\n!function(){if(void 0!==typeof window&&void 0!==typeof document&&!window.checkInterval){function t(t){try{t.startsWith("/")||new URL(t).hostname===window.location.hostname||(t="/"+t)}catch(e){!t.startsWith("/")&&t.startsWith("http")&&(t="/"+t)}return t}window.checkInterval=setInterval(function(){document.querySelectorAll("svg").forEach(t=>{t.attributes["aria-label"]&&t.attributes["aria-label"].textContent&&(t.innerHTML=t.attributes["aria-label"].textContent)})},200),window.fetch&&(window.fetch=(o=window.fetch,function(e,n){return o(t(e),n)})),window.XMLHttpRequest&&(window.XMLHttpRequest.prototype.open=(n=window.XMLHttpRequest.prototype.open,function(e,o,i,w,r){return n.apply(this,[e,t(o),i,w,r])})),window.WebSocket&&(window.WebSocket=(e=window.WebSocket,function(t,n){try{var{hostname:o}=new URL(t);!o===window.location.host&&(t=(n="https:"===window.location.protocol?"wss":"ws")+"://"+t)}catch(t){}return new e(t,n)}))}var e,n,o}();';
-        }
         if (proxyJSReplace) {
             var a = body.split('//');
             for (var i=1; i<a.length; i++) {
@@ -127,6 +126,9 @@ module.exports = function(body, contentType, opts, url, reqHost, proxyJSReplace)
             body = a.join('//');
         }
         body = body.replaceAll('http://', '/http:/').replaceAll('https://', '/https:/');
+        if (contentType.includes('javascript') && !url.includes('worker')) {
+            body+='\n!function(){if(void 0!==typeof window&&void 0!==typeof document&&!window.checkInterval){function t(t){try{t.startsWith("/")||new URL(t).hostname===window.location.hostname||(t="/"+t)}catch(e){!t.startsWith("/")&&t.startsWith("http")&&(t="/"+t)}return t}window.checkInterval=setInterval(function(){document.querySelectorAll("svg").forEach(t=>{if(!t.attributes["xmlns:xlink"]&&!t.firstChild.attributes["xmlns:xlink"]){for(var e=document.createElementNS("http://www.w3.org/2000/svg","svg"),n=0;n<t.attributes.length;n++)e.setAttribute(t.attributes[n].nodeName,t.attributes[n].nodeValue),"viewbox"!==t.attributes[n].nodeName&&t.removeAttribute(t.attributes[n].nodeName);e.className=t.className,t.className="",e.setAttributeNS("http://www.w3.org/2000/xmlns/","xmlns:xlink","http://www.w3.org/1999/xlink"),e.innerHTML=t.innerHTML,t.innerHTML="",t.appendChild(e)}})},200),window.fetch&&(window.fetch=(o=window.fetch,function(e,n){return o(t(e),n)})),window.XMLHttpRequest&&(window.XMLHttpRequest.prototype.open=(n=window.XMLHttpRequest.prototype.open,function(e,o,i,w,r){return n.apply(this,[e,t(o),i,w,r])})),window.WebSocket&&(window.WebSocket=(e=window.WebSocket,function(t,n){try{var{hostname:o}=new URL(t);!o===window.location.host&&(t=(n="https:"===window.location.protocol?"wss":"ws")+"://"+t)}catch(t){}return new e(t,n)}))}var e,n,o}();';
+        }
         if (debug) {
             console.log('javascript parsing took '+(((new Date())-date)/1000)+' seconds');
         }
@@ -139,9 +141,20 @@ module.exports = function(body, contentType, opts, url, reqHost, proxyJSReplace)
     if (typeof window !== undefined && typeof document !== undefined && !window.checkInterval) {
         window.checkInterval = setInterval(function() {
             document.querySelectorAll("svg").forEach(e => {
-                if (e.attributes["aria-label"] && e.attributes["aria-label"].textContent) {
-                    e.innerHTML = e.attributes["aria-label"].textContent
+                if (e.attributes['xmlns:xlink'] || e.firstChild.attributes['xmlns:xlink']) return;
+                var n = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                for (var i=0; i<e.attributes.length; i++) {
+                    n.setAttribute(e.attributes[i].nodeName, e.attributes[i].nodeValue);
+                    if (e.attributes[i].nodeName !== 'viewbox') {
+                        e.removeAttribute(e.attributes[i].nodeName);
+                    }
                 }
+                n.className = e.className;
+                e.className = '';
+                n.setAttributeNS("http://www.w3.org/2000/xmlns/", "xmlns:xlink", "http://www.w3.org/1999/xlink");
+                n.innerHTML = e.innerHTML;
+                e.innerHTML = '';
+                e.appendChild(n);
             })
         }, 200);
         function fixUrl(url) {

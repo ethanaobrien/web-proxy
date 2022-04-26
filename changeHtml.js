@@ -35,6 +35,12 @@ module.exports = async function(req, res) {
         } else {
             args = transformArgs(req.url);
         }
+        if (args.site && args.site.startsWith('/http')) {
+            args.site = args.site.substring(1);
+        }
+        if (args.custom && args.custom.startsWith('/http')) {
+            args.custom = args.custom.substring(1);
+        }
         if ((args.site || args.custom)) {
             var error = false;
             var path2Redir2 = '/';

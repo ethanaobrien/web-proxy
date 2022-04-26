@@ -79,17 +79,6 @@ module.exports = {
         for (var i=0; i<files.length; i++) {
             paths.push(files[i].path);
         }
-        var result = [];
-        var level = {result};
-        paths.forEach(path => {
-            path.split('/').reduce((r, name, i, a) => {
-                if(!r[name]) {
-                    r[name] = {result: []};
-                    r.result.push({name, children: r[name].result, fullPath:path})
-                }
-                return r[name];
-            }, level)
-        })
         function processFiles(a) {
             a = a.sort(function(a, b) {
                 return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
@@ -116,7 +105,7 @@ module.exports = {
                 }
             }
         }
-        return processFiles(result)
+        return processFiles(fileTree(paths));
     },
     fileTree: function(paths) {
         var result = [];
@@ -149,8 +138,11 @@ module.exports = {
                     a[i].isFile = false;
                     a[i].isDirectory = true;
                     a[i].children = process(a[i].children);
-                    a[i].path = a[i].path.substring(0, a[i].path.length-a[i].path.split('/').pop().length);
+                    a[i].path = a[i].path.substring(0, a[i].path.length-a[i].path.split(a[i].name).pop().length);
                     a[i].size = folderSizes(a[i].children);
+                    if (!a[i].path.endsWith('/')) {
+                        a[i].path += '/';
+                    }
                 } else {
                     a[i].isFile = true;
                     a[i].isDirectory = false;
