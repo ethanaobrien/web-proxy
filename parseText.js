@@ -12,8 +12,6 @@ module.exports = function(body, contentType, opts, url, reqHost, proxyJSReplace)
         startUrl = startUrl.substring(0, startUrl.length-1);
     }
     body = body
-        .replaceNC(site2Proxy.split('://').pop(), reqHost)
-        .replaceNC(site2Proxy.split('://').pop(), reqHost)
         .replaceNC('"'+site2Proxy+'/', '"'+startUrl+'/')
         .replaceNC("'"+site2Proxy+'/', '\''+startUrl+'/')
         .replaceNC("'"+site2Proxy, '\''+startUrl+'')
@@ -22,6 +20,8 @@ module.exports = function(body, contentType, opts, url, reqHost, proxyJSReplace)
         .replaceNC('"'+site2Proxy.replaceNC('\\/', '/')+'/', '"/')
         .replaceNC("'"+site2Proxy.replaceNC('\\/', '/'), '\'')
         .replaceNC('"'+site2Proxy.replaceNC('\\/', '/'), '"')
+        .replaceNC(site2Proxy.split('://').pop(), reqHost)
+        .replaceNC(site2Proxy.split('://').pop(), reqHost)
         .replaceNC("'"+hostname, "'"+reqHost)
         .replaceNC('"'+hostname, '"'+reqHost)
         .replaceNC("'"+hn2, "'"+reqHost)
