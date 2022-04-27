@@ -127,7 +127,7 @@ module.exports = function(body, contentType, opts, url, reqHost, proxyJSReplace)
         }
         body = body.replaceAll('http://', '/http:/').replaceAll('https://', '/https:/');
         if (contentType.includes('javascript') && !url.includes('worker')) {
-            body+='\n!function(){if(void 0!==typeof window&&void 0!==typeof document&&!window.checkInterval){function t(t){try{t.startsWith("/")||new URL(t).hostname===window.location.hostname||(t="/"+t)}catch(e){!t.startsWith("/")&&t.startsWith("http")&&(t="/"+t)}return t}window.checkInterval=setInterval(function(){document.querySelectorAll("svg").forEach(t=>{t&&t.attributes&&t.attributes["aria-label"]&&t.attributes["aria-label"].textContent&&(t.innerHTML=t.attributes["aria-label"].textContent)})},200),window.fetch&&(window.fetch=(o=window.fetch,function(e,n){return n.integrity&&delete n.integrity,o(t(e),n)})),window.XMLHttpRequest&&(window.XMLHttpRequest.prototype.open=(n=window.XMLHttpRequest.prototype.open,function(e,o,i,w,r){return n.apply(this,[e,t(o),i,w,r])})),window.WebSocket&&(window.WebSocket=(e=window.WebSocket,function(t,n){try{var{hostname:o}=new URL(t);!o===window.location.host&&(t=(n="https:"===window.location.protocol?"wss":"ws")+"://"+t)}catch(t){}return new e(t,n)}))}var e,n,o}();';
+            body+='\n!function(){if(void 0!==typeof window&&void 0!==typeof document&&!window.checkInterval){function t(t){try{t.startsWith("/")||new URL(t).hostname===window.location.hostname||(t="/"+t)}catch(e){!t.startsWith("/")&&t.startsWith("http")&&(t="/"+t)}return t}window.checkInterval=setInterval(function(){document.querySelectorAll("svg").forEach(t=>{t&&t.attributes&&t.attributes["aria-label"]&&t.attributes["aria-label"].textContent&&(t.innerHTML=t.attributes["aria-label"].textContent)})},200),window.fetch&&(window.fetch=(o=window.fetch,function(e,n){return n&&n.integrity&&delete n.integrity,o(t(e),n)})),window.XMLHttpRequest&&(window.XMLHttpRequest.prototype.open=(n=window.XMLHttpRequest.prototype.open,function(e,o,i,w,r){return n.apply(this,[e,t(o),i,w,r])})),window.WebSocket&&(window.WebSocket=(e=window.WebSocket,function(t,n){try{var{hostname:o}=new URL(t);!o===window.location.host&&(t=(n="https:"===window.location.protocol?"wss":"ws")+"://"+t)}catch(t){}return new e(t,n)}))}var e,n,o}();';
         }
         if (debug) {
             console.log('javascript parsing took '+(((new Date())-date)/1000)+' seconds');
@@ -161,7 +161,7 @@ module.exports = function(body, contentType, opts, url, reqHost, proxyJSReplace)
         if (window.fetch) {
             window.fetch = (function(oldFetch) {
                 return function(url, opts) {
-                    if (opts.integrity) delete opts.integrity;
+                    if (opts && opts.integrity) delete opts.integrity;
                     return oldFetch(fixUrl(url), opts);
                 }
             })(window.fetch);
