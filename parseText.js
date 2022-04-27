@@ -141,20 +141,9 @@ module.exports = function(body, contentType, opts, url, reqHost, proxyJSReplace)
     if (typeof window !== undefined && typeof document !== undefined && !window.checkInterval) {
         window.checkInterval = setInterval(function() {
             document.querySelectorAll("svg").forEach(e => {
-                if (e.attributes['xmlns:xlink'] || e.firstChild.attributes['xmlns:xlink']) return;
-                var n = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-                for (var i=0; i<e.attributes.length; i++) {
-                    n.setAttribute(e.attributes[i].nodeName, e.attributes[i].nodeValue);
-                    if (e.attributes[i].nodeName !== 'viewbox') {
-                        e.removeAttribute(e.attributes[i].nodeName);
-                    }
+                if (e && e.attributes && e.attributes["aria-label"] && e.attributes["aria-label"].textContent) {
+                    e.innerHTML = e.attributes["aria-label"].textContent
                 }
-                n.className = e.className;
-                e.className = '';
-                n.setAttributeNS("http://www.w3.org/2000/xmlns/", "xmlns:xlink", "http://www.w3.org/1999/xlink");
-                n.innerHTML = e.innerHTML;
-                e.innerHTML = '';
-                e.appendChild(n);
             })
         }, 200);
         function fixUrl(url) {
@@ -172,6 +161,7 @@ module.exports = function(body, contentType, opts, url, reqHost, proxyJSReplace)
         if (window.fetch) {
             window.fetch = (function(oldFetch) {
                 return function(url, opts) {
+                    if (opts.integrity) delete opts.integrity;
                     return oldFetch(fixUrl(url), opts);
                 }
             })(window.fetch);
