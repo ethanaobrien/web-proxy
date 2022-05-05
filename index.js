@@ -13,6 +13,7 @@ global.hideTitle = require("./hideTitle.js");
 global.setupWebsocket = require("./websocket.js");
 global.urlShortener = require("./urlShortener.js");
 global.ytdl = require('youtube-downloader-ethanaobrien');
+global.fs = require('fs');
 var a = require("./utils.js");
 for (var k in a) {
     global[k] = a[k];
@@ -100,6 +101,11 @@ var server = http.createServer(async function(req, res) {
     var url=req.url,method=req.method,consumed=false;
     if (req.url.split('?')[0] === '/torrentStream') {
         torrent(req, res);
+        return;
+    }
+    if (req.url.split('?')[0] === '/worker.js') {
+        res.setHeader('content-type', 'text/javascript; chartset=utf-8');
+        res.end(fs.readFileSync("worker.js", "utf8"));
         return;
     }
     if (req.url.split('?')[0] === '/yt') {
@@ -225,6 +231,7 @@ var server = http.createServer(async function(req, res) {
             res.setHeader(k, resp.headers[k]);
         }
     }
+    //res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('x-frame-options', 'SAMEORIGIN');
     if (vc == 'true' || vc == '1' || nc == 'true' || nc == '1') {
         res.setHeader('content-type', 'text/plain');
