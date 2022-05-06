@@ -1,4 +1,3 @@
-
 global.https = require('https');
 global.http = require('http');
 global.torrentStream = require('torrent-stream');

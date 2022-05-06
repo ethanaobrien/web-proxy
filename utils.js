@@ -111,8 +111,8 @@ module.exports = {
         var result = [];
         var level = {result};
         paths.forEach(info => {
-            var size = info.size;
-            path = info.path;
+            var path=info.path, size=info.size;
+            if (typeof info == 'string') path = info;
             path.split('/').reduce((r, name, i, a) => {
                 if(!r[name]) {
                     r[name] = {result: []};
