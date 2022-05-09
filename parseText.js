@@ -1,6 +1,6 @@
 module.exports = function(body, contentType, opts, url, reqHost, proxyJSReplace) {
     var {site2Proxy,replaceExternalUrls} = opts;
-    var funcString = 'void 0!==typeof window&&window.addEventListener("DOMContentLoaded",function(){var t,e,n;function o(t){try{t.startsWith("/")||new URL(t).hostname===window.location.hostname||(t="/"+t)}catch(e){!t.startsWith("/")&&t.startsWith("http")&&(t="/"+t)}return t}window.checkInterval||("serviceWorker"in navigator&&async function(){navigator.serviceWorker.register("/worker.js"),await navigator.serviceWorker.ready}(),window.checkInterval=setInterval(function(){document.querySelectorAll("svg").forEach(t=>{t&&t.attributes&&t.attributes["aria-label"]&&t.attributes["aria-label"].textContent&&(t.innerHTML=t.attributes["aria-label"].textContent)})},200),window.fetch&&(window.fetch=(t=window.fetch,function(e,n){return n&&n.integrity&&delete n.integrity,t(o(e),n)})),window.XMLHttpRequest&&(window.XMLHttpRequest.prototype.open=(e=window.XMLHttpRequest.prototype.open,function(t,n,i,r,a){return e.apply(this,[t,o(n),i,r,a])})),window.WebSocket&&(window.WebSocket=(n=window.WebSocket,function(t,e){try{var{hostname:o}=new URL(t);!o===window.location.host&&(t=(e="https:"===window.location.protocol?"wss":"ws")+"://"+t)}catch(t){}return new n(t,e)})))});';
+    var funcString = '\nvoid 0!==typeof window&&window.addEventListener("DOMContentLoaded",function(){var t,e,n;function o(t){try{t.startsWith("/")||new URL(t).hostname===window.location.hostname||(t="/"+t)}catch(e){!t.startsWith("/")&&t.startsWith("http")&&(t="/"+t)}return t}window.checkInterval||("serviceWorker"in navigator&&async function(){navigator.serviceWorker.register("/worker.js"),await navigator.serviceWorker.ready}(),window.checkInterval=setInterval(function(){document.querySelectorAll("svg").forEach(t=>{t&&t.attributes&&t.attributes["aria-label"]&&t.attributes["aria-label"].textContent&&(t.innerHTML=t.attributes["aria-label"].textContent)})},200),window.fetch&&(window.fetch=(t=window.fetch,function(e,n){return n&&n.integrity&&delete n.integrity,t(o(e),n)})),window.XMLHttpRequest&&(window.XMLHttpRequest.prototype.open=(e=window.XMLHttpRequest.prototype.open,function(t,n,i,r,a){return e.apply(this,[t,o(n),i,r,a])})),window.WebSocket&&(window.WebSocket=(n=window.WebSocket,function(t,e){try{var{hostname:o}=new URL(t);!o===window.location.host&&(t=(e="https:"===window.location.protocol?"wss":"ws")+"://"+t)}catch(t){}return new n(t,e)})))});\n';
     var date = new Date();
     var origBody = body;
     var {hostname} = new URL(url);
@@ -27,6 +27,7 @@ module.exports = function(body, contentType, opts, url, reqHost, proxyJSReplace)
         .replaceNC('"'+hostname, '"'+reqHost)
         .replaceNC("'"+hn2, "'"+reqHost)
         .replaceNC('"'+hn2, '"'+reqHost)
+        .replaceNC('i.'+hostname, hostname)
         .replaceNC('wss://', 'wss://'+reqHost+'/')
         .replaceNC('integrity', 'integrityy')
         .replaceNC('crossorigin', 'sadfghjj')
@@ -128,7 +129,7 @@ module.exports = function(body, contentType, opts, url, reqHost, proxyJSReplace)
         }
         body = body.replaceAll('http://', '/http:/').replaceAll('https://', '/https:/');
         if (contentType.includes('javascript') && !url.includes('worker')) {
-            body = '\n'+funcString+body;
+            body = funcString+body;
         }
         if (debug) {
             console.log('javascript parsing took '+(((new Date())-date)/1000)+' seconds');

@@ -84,20 +84,21 @@ module.exports = {
                 return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
             });
             for (var i=0; i<a.length; i++) {
-                if (a[i].children && a[i].children.length > 0) {
+                if (a[i].isDirectory) {
                     var b = processFiles(a[i].children);
                     if (b) {
                         return b;
                     }
-                } else if (a[i].fullPath === currentFile) {
+                } else if (a[i].path === currentFile) {
+                    console.log('a')
                     var out = [];
                     if (a[i+1]) {
-                        out[1] = '/torrentStream?fileName='+encodeURIComponent(a[i+1].fullPath)+'&stage=step2&stream=on&fetchFile=no&magnet='+magnet;
+                        out[1] = '/torrentStream?fileName='+encodeURIComponent(a[i+1].path)+'&stage=step2&stream=on&fetchFile=no&magnet='+magnet;
                     } else {
                         out[1] = null;
                     }
                     if (a[i-1]) {
-                        out[0] = '/torrentStream?fileName='+encodeURIComponent(a[i-1].fullPath)+'&stage=step2&stream=on&fetchFile=no&magnet='+magnet;
+                        out[0] = '/torrentStream?fileName='+encodeURIComponent(a[i-1].path)+'&stage=step2&stream=on&fetchFile=no&magnet='+magnet;
                     } else {
                         out[0] = null;
                     }
