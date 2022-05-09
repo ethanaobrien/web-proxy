@@ -84,7 +84,7 @@ module.exports = {
                 return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
             });
             for (var i=0; i<a.length; i++) {
-                if (a[i].children.length > 0) {
+                if (a[i].children && a[i].children.length > 0) {
                     var b = processFiles(a[i].children);
                     if (b) {
                         return b;
