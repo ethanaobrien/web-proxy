@@ -102,7 +102,7 @@ var server = http.createServer(async function(req, res) {
         torrent(req, res);
         return;
     }
-    if (req.url.split('?')[0] === '/worker.js') {
+    if (req.url === '/worker.js?proxyWorker=true') {
         res.setHeader('content-type', 'text/javascript; chartset=utf-8');
         res.end(fs.readFileSync("worker.js", "utf8"));
         return;
@@ -222,7 +222,9 @@ var server = http.createServer(async function(req, res) {
             resp.headers[k] = 'https:'+resp.headers[k];
         }
         if (resp.headers[k].startsWith('/')) {
-            resp.headers[k] = 'https://'+(new URL(url)).hostname+resp.headers[k];
+            try {
+                resp.headers[k] = 'https://'+(new URL(url)).hostname+resp.headers[k];
+            } catch(e){}
         }
         if (typeof resp.headers[k] == 'string') {
             res.setHeader(k, resp.headers[k].replaceAll(opts.site2Proxy+'/', '/').replaceAll(opts.site2Proxy, '').replaceAll('http', '/http'));

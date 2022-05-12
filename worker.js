@@ -1,5 +1,4 @@
 addEventListener("fetch", async (e) => {
-    console.log(e.request.url)
     if (self.location.hostname !== (new URL(e.request.url)).hostname) {
         var res;
         try {

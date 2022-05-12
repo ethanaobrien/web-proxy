@@ -1,6 +1,6 @@
 module.exports = function(body, contentType, opts, url, reqHost, proxyJSReplace) {
     var {site2Proxy,replaceExternalUrls} = opts;
-    var funcString = '\nvoid 0!==typeof window&&window.addEventListener("DOMContentLoaded",function(){var t,e,n;function o(t){try{t.startsWith("/")||new URL(t).hostname===window.location.hostname||(t="/"+t)}catch(e){!t.startsWith("/")&&t.startsWith("http")&&(t="/"+t)}return t}window.checkInterval||("serviceWorker"in navigator&&async function(){navigator.serviceWorker.register("/worker.js"),await navigator.serviceWorker.ready}(),window.checkInterval=setInterval(function(){document.querySelectorAll("svg").forEach(t=>{t&&t.attributes&&t.attributes["aria-label"]&&t.attributes["aria-label"].textContent&&(t.innerHTML=t.attributes["aria-label"].textContent)})},200),window.fetch&&(window.fetch=(t=window.fetch,function(e,n){return n&&n.integrity&&delete n.integrity,t(o(e),n)})),window.XMLHttpRequest&&(window.XMLHttpRequest.prototype.open=(e=window.XMLHttpRequest.prototype.open,function(t,n,i,r,a){return e.apply(this,[t,o(n),i,r,a])})),window.WebSocket&&(window.WebSocket=(n=window.WebSocket,function(t,e){try{var{hostname:o}=new URL(t);!o===window.location.host&&(t=(e="https:"===window.location.protocol?"wss":"ws")+"://"+t)}catch(t){}return new n(t,e)})))});\n';
+    var funcString = '\nvoid 0!==typeof window&&window.addEventListener("DOMContentLoaded",function(){if(!window.checkInterval){if("serviceWorker"in navigator){var t=navigator.serviceWorker.register;!async function(){t("/worker.js?proxyWorker=true"),await navigator.serviceWorker.ready}(),navigator.serviceWorker.register=function(){return null}}var e,n,o;window.checkInterval=setInterval(function(){document.querySelectorAll("svg").forEach(t=>{t&&t.attributes&&t.attributes["aria-label"]&&t.attributes["aria-label"].textContent&&(t.innerHTML=t.attributes["aria-label"].textContent)})},200),window.fetch&&(window.fetch=(e=window.fetch,function(t,n){return n&&n.integrity&&delete n.integrity,e(r(t),n)})),window.XMLHttpRequest&&(window.XMLHttpRequest.prototype.open=(n=window.XMLHttpRequest.prototype.open,function(t,e,o,i,a){return n.apply(this,[t,r(e),o,i,a])})),window.WebSocket&&(window.WebSocket=(o=window.WebSocket,function(t,e){try{var{hostname:n}=new URL(t);!n===window.location.host&&(t=(e="https:"===window.location.protocol?"wss":"ws")+"://"+t)}catch(t){}return new o(t,e)}))}function r(t){try{t.startsWith("/")||new URL(t).hostname===window.location.hostname||(t="/"+t)}catch(e){!t.startsWith("/")&&t.startsWith("http")&&(t="/"+t)}return t}});\n';
     var date = new Date();
     var origBody = body;
     var {hostname} = new URL(url);
@@ -21,13 +21,12 @@ module.exports = function(body, contentType, opts, url, reqHost, proxyJSReplace)
         .replaceNC('"'+site2Proxy.replaceNC('\\/', '/')+'/', '"/')
         .replaceNC("'"+site2Proxy.replaceNC('\\/', '/'), '\'')
         .replaceNC('"'+site2Proxy.replaceNC('\\/', '/'), '"')
-        .replaceNC(site2Proxy.split('://').pop(), reqHost)
-        .replaceNC(site2Proxy.split('://').pop(), reqHost)
+        .replaceNC("'"+site2Proxy.split('://').pop(), "'"+reqHost)
+        .replaceNC('"'+site2Proxy.split('://').pop(), '"'+reqHost)
         .replaceNC("'"+hostname, "'"+reqHost)
         .replaceNC('"'+hostname, '"'+reqHost)
         .replaceNC("'"+hn2, "'"+reqHost)
         .replaceNC('"'+hn2, '"'+reqHost)
-        .replaceNC('i.'+hostname, hostname)
         .replaceNC('wss://', 'wss://'+reqHost+'/')
         .replaceNC('integrity', 'integrityy')
         .replaceNC('crossorigin', 'sadfghjj')
@@ -145,10 +144,14 @@ module.exports = function(body, contentType, opts, url, reqHost, proxyJSReplace)
         window.addEventListener("DOMContentLoaded", function() {
             if (window.checkInterval) return;
             if ('serviceWorker' in navigator) {
+                var asd = navigator.serviceWorker.register;
                 (async function() {
-                    navigator.serviceWorker.register("/worker.js");
+                    asd("/worker.js?proxyWorker=true");
                     await navigator.serviceWorker.ready;
                 })();
+                navigator.serviceWorker.register = function() {
+                    return null;
+                }
             }
             window.checkInterval = setInterval(function() {
                 document.querySelectorAll("svg").forEach(e => {

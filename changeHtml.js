@@ -174,5 +174,5 @@ module.exports = async function(req, res) {
     html += '</body></html>';
     html = bodyBuffer(html);
     res.setHeader('content-length', html.byteLength);
-    res.end(html)
+    res.end(html);
 }

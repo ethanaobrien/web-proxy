@@ -90,7 +90,6 @@ module.exports = {
                         return b;
                     }
                 } else if (a[i].path === currentFile) {
-                    console.log('a')
                     var out = [];
                     if (a[i+1]) {
                         out[1] = '/torrentStream?fileName='+encodeURIComponent(a[i+1].path)+'&stage=step2&stream=on&fetchFile=no&magnet='+magnet;
