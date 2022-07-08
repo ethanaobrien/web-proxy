@@ -1,0 +1,27 @@
+{
+    "name": "Web Proxy",
+    "id": "web-proxy",
+    "version": "1.0.0",
+    "options": [{
+        "id": "debug",
+        "name": "Debug",
+        "type": "bool",
+        "default": false
+    },{
+        "id": "allowAdultContent",
+        "name": "Adult Content",
+        "type": "bool",
+        "default": false
+    },{
+        "id": "torrent",
+        "name": "Allow Torrenting",
+        "type": "bool",
+        "default": false
+    },{
+        "id": "forceSite",
+        "name": "Force Site",
+        "type": "string",
+        "default": false
+    }],
+    "script": "main.js"
+}
