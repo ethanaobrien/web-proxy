@@ -1,9 +1,9 @@
-module.exports = async function(req, res) {
+module.exports = async function(req, res, optz) {
     var errMsg = '', adultContent = false;
-    if (typeof forceSite !== undefined &&
-        typeof forceSite == 'string' &&
-        forceSite.trim() !== '') {
-        var site = forceSite;
+    if (typeof optz.forceSite !== undefined &&
+        typeof optz.forceSite == 'string' &&
+        optz.forceSite.trim() !== '') {
+        var site = optz.forceSite;
         try {
             var b;
             while (b = await check4Redirects(site)) {
@@ -61,7 +61,7 @@ module.exports = async function(req, res) {
                         }
                     }
                     var isNotGood = isNotGoodSite(args.custom?args.custom:decodeURIComponent(args.site));
-                    if (((!args.confirmation && allowAdultContent) && isNotGood) || (!allowAdultContent && isNotGood)) {
+                    if (((!args.confirmation && optz.allowAdultContent) && isNotGood) || (!optz.allowAdultContent && isNotGood)) {
                         error = true;
                         adultContent = true;
                     }
@@ -89,7 +89,7 @@ module.exports = async function(req, res) {
                 }
             }
             var isNotGood = isNotGoodSite(args.custom?args.custom:decodeURIComponent(args.site));
-            if (((!args.confirmation && allowAdultContent) && isNotGood) || (!allowAdultContent && isNotGood)) {
+            if (((!args.confirmation && optz.allowAdultContent) && isNotGood) || (!optz.allowAdultContent && isNotGood)) {
                 error = true;
                 adultContent = true;
             }
@@ -128,7 +128,7 @@ module.exports = async function(req, res) {
     } else {
         html += '<p>It is recommended to bookmark this page to be able to easily change the site in the future</p>';
     }
-    if (adultContent && allowAdultContent) {
+    if (adultContent && optz.allowAdultContent) {
         html += '<p style="color:red;">Warning: site may include adult content. Please confirm your settings</p>';
     } else if (adultContent) {
         html += '<p style="color:red;">Site restricted. Please contact the site owner for more information</p>';
@@ -167,7 +167,7 @@ module.exports = async function(req, res) {
         html += '<input type="radio" id="'+encodeURIComponent(sites[i][0])+'" name="site" value="'+encodeURIComponent(sites[i][0])+'"'+c+'><label for="'+encodeURIComponent(sites[i][0])+'">'+sites[i][2]+(sites[i][1]?' (buggy)':'')+'</label><br>';
     }
     html += ('<br><label for="custom">Custom URL</label><input type="text" id="custom" name="custom" value='+customVal+'><br><br><input type="checkbox" id="JSReplaceURL" name="JSReplaceURL" value="true"'+rpSlashUrls+'><label for="JSReplaceURL"> Replace Javascript // urls (may break some sites)</label><br><br><input type="checkbox" id="absoluteSite" name="absoluteSite" value="true"'+absoluteSite+'><label for="absoluteSite"> Set as absolute proxy site (required for some sites, recommended to clear your cookies before enabling to prevent possible leak of personal data)</label><br><br><input type="checkbox" id="hidden" name="hidden" value="true"'+gc+'><label for="hidden"> Hide page title/url from search history (will appear as google classroom)</label><br><br><input type="checkbox" id="replaceExternal" name="replaceExternal" value="true"'+external+'><label for="replaceExternal"> Replace External URLs</label><br><br><input type="checkbox" id="shareURL" name="shareURL" value="true"'+share+'><label for="shareURL"> Get url to share (or bookmark)</label><br><br><input type="checkbox" id="clearOnExit" name="clearOnExit" value="true"'+clearOnExit+'><label for="clearOnExit"> Clear site to serve on Browser exit</label><br><br>');
-    if (adultContent && allowAdultContent) {
+    if (adultContent && optz.allowAdultContent) {
         html += '<input type="checkbox" id="confirmation" name="confirmation" value="true"><label for="confirmation"> Check this box to confirm you know what you are about to see may be adult content.</label><br><br>';
     }
     html +='<input type="submit" value="Submit"></form><ul></ul>';

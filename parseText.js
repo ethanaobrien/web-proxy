@@ -1,4 +1,4 @@
-module.exports = function(body, contentType, opts, url, reqHost, proxyJSReplace) {
+module.exports = function(body, contentType, opts, url, reqHost, proxyJSReplace, optz) {
     var {site2Proxy,replaceExternalUrls} = opts;
     var funcString = '\nvoid 0!==typeof window&&window.addEventListener("DOMContentLoaded",function(){var t,e,n;function o(t){try{t.startsWith("/")||new URL(t).hostname===window.location.hostname||(t="/"+t)}catch(e){!t.startsWith("/")&&t.startsWith("http")&&(t="/"+t)}return t}window.checkInterval||("serviceWorker"in navigator&&async function(){navigator.serviceWorker.register("/worker.js?proxyWorker=true"),navigator.serviceWorker.register=function(){return null},await navigator.serviceWorker.ready}(),window.checkInterval=setInterval(function(){document.querySelectorAll("svg").forEach(t=>{t&&t.attributes&&t.attributes["aria-label"]&&t.attributes["aria-label"].textContent&&(t.innerHTML=t.attributes["aria-label"].textContent)})},200),window.fetch&&(window.fetch=(t=window.fetch,function(e,n){return n&&n.integrity&&delete n.integrity,t(o(e),n)})),window.XMLHttpRequest&&(window.XMLHttpRequest.prototype.open=(e=window.XMLHttpRequest.prototype.open,function(t,n,r,i,a){return e.apply(this,[t,o(n),r,i,a])})),window.WebSocket&&(window.WebSocket=(n=window.WebSocket,function(t,e){try{var{hostname:o}=new URL(t);!o===window.location.host&&(t=(e="https:"===window.location.protocol?"wss":"ws")+"://"+t)}catch(t){}return new n(t,e)})))});\n';
     var date = new Date();
@@ -82,7 +82,7 @@ module.exports = function(body, contentType, opts, url, reqHost, proxyJSReplace)
             }
         }
         body = a.join('href');
-        if (debug) {
+        if (optz.debug) {
             console.log('html parsing took '+(((new Date())-date)/1000)+' seconds');
         }
         body = '<script>'+funcString+'</script>\n'+body;
@@ -111,7 +111,7 @@ module.exports = function(body, contentType, opts, url, reqHost, proxyJSReplace)
             return origBody;
         }
         body = a.join('&');
-        if (debug) {
+        if (optz.debug) {
             console.log('url encoded parsing took '+(((new Date())-date)/1000)+' seconds');
         }
         return body;
@@ -130,7 +130,7 @@ module.exports = function(body, contentType, opts, url, reqHost, proxyJSReplace)
         if (contentType.includes('javascript') && !url.includes('worker')) {
             body = funcString+body;
         }
-        if (debug) {
+        if (optz.debug) {
             console.log('javascript parsing took '+(((new Date())-date)/1000)+' seconds');
         }
         return body.replaceAll('/https://', '/https://').replaceAll('/http://', '/https://')
