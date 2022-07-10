@@ -93,7 +93,7 @@ async function onRequest(req, res, optz, preventDefault) {
     if (req.url === '/worker.js?proxyWorker=true') {
         res.setHeader('content-type', 'text/javascript; chartset=utf-8');
         try {
-            res.end(fs.readFileSync("worker.js", "utf8"));
+            res.end(fs.readFileSync(require.resolve("./worker.js"), "utf8"));
         } catch(e) {
             res.end('error');
             console.warn('error reading service worker file', e);
