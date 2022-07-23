@@ -65,6 +65,12 @@ module.exports = function(req, res) {
                 if (['image', 'video', 'audio'].includes(ct)) {
                     html += '<meta property="og:'+ct+'" content="'+downloadUrl+'"><meta property="og:'+ct+':url" content="'+downloadUrl+'"><meta property="og:'+ct+':type" content="'+MIMETYPES[file.name.split('.').pop()]+'">';
                 }
+                if (ct !== 'image') {
+                    var cover = getFolderImage(files, magnet);
+                    if (cover) {
+                        html += '<meta property="og:image" content="'+cover.path+'"><meta property="og:image:url" content="'+cover.path+'"><meta property="og:image:type" content="'+cover.mime+'">';
+                    }
+                }
                 html += '<style>.nb{text-decoration:none;display:inline-block;padding:8px 16px;border-radius:12px;transition:0.35s;color:black;}.previous{background-color:#00b512;}.previous:hover{background-color:#ee00ff;}.next{background-color:#ffa600;}.next:hover{background-color:#0099ff;}</style><meta name="viewport" content="width=device-width, initial-scale=1"><title>'+file.name+'</title></head><body><br><br><br><center>';
                 html += ('<'+tagName);
                 if (['video', 'image'].includes(ct)) {
