@@ -95,7 +95,7 @@ module.exports = {
                         if (c[o].isDirectory) continue;
                         var mime = MIMETYPES[c[o].path.toLowerCase().split('.').pop()];
                         if (mime.split('/')[0] === 'image' && ['cover', 'folder'].includes(c[o].path.toLowerCase().split('/').pop().split('.')[0].split('_')[0])) {
-                            return {mime, path:'/torrentStream?fileName='+encodeURIComponent(c[o].path)+'&stage=step2&stream=on&fetchFile=no&magnet='+magnet};
+                            return {mime, path:'/torrentStream?fileName='+encodeURIComponent(c[o].path)+'&stage=step2&stream=on&magnet='+magnet};
                         }
                     }
                 }
