@@ -31,7 +31,7 @@ module.exports = function(req, res) {
         var files = engine.files;
         var torrentName = engine.torrent.name;
         if (stage === 'step1') {
-            var html = '<html><head><meta property="og:title" content=\''+torrentName+'\'>';
+            var html = '<html><head><meta property="og:title" content="'+torrentName+'">';
             var cover = getFolderImage(files, magnet);
             if (cover) {
                 html += '<meta property="og:image" content="'+cover.path+'"><meta property="og:image:url" content="'+cover.path+'"><meta property="og:image:type" content="'+cover.mime+'">';
@@ -61,7 +61,7 @@ module.exports = function(req, res) {
             if (args.stream === 'on' && args.fetchFile === 'no') {
                 var downloadUrl = '/torrentStream?fileName='+encodeURIComponent(file.path)+'&stage=step2&stream=on&magnet='+magnet;
                 var tagName = ['video', 'audio'].includes(ct) ? ct : ('image' === ct ? 'img' : 'iframe');
-                var html = '<html><head><meta property="og:title" content=\''+file.name+'\'>';
+                var html = '<html><head><meta property="og:title" content="'+file.name+'">';
                 if (['image', 'video', 'audio'].includes(ct)) {
                     html += '<meta property="og:'+ct+'" content="'+downloadUrl+'"><meta property="og:'+ct+':url" content="'+downloadUrl+'"><meta property="og:'+ct+':type" content="'+MIMETYPES[file.name.split('.').pop()]+'">';
                 }
