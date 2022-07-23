@@ -65,7 +65,7 @@ module.exports = function(req, res) {
                 if (['image', 'video', 'audio'].includes(ct)) {
                     html += '<meta property="og:'+ct+'" content="'+downloadUrl+'"><meta property="og:'+ct+':url" content="'+downloadUrl+'"><meta property="og:'+ct+':type" content="'+MIMETYPES[file.name.split('.').pop()]+'">';
                 }
-                if (ct !== 'image') {
+                if (ct === 'video') {
                     var cover = getFolderImage(files, magnet);
                     if (cover) {
                         html += '<meta property="og:image" content="'+cover.path+'"><meta property="og:image:url" content="'+cover.path+'"><meta property="og:image:type" content="'+cover.mime+'">';
