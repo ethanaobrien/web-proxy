@@ -74,6 +74,35 @@ module.exports = {
             }).on('error', reject);
         })
     },
+    getFolderImage: function(files, magnet) {
+        var paths = [];
+        for (var i=0; i<files.length; i++) {
+            paths.push(files[i].path);
+        }
+        function processFiles(a) {
+            a = a.sort(function(a, b) {
+                return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+            });
+            for (var i=0; i<a.length; i++) {
+                if (a[i].isDirectory) {
+                    var b = processFiles(a[i].children);
+                    if (b) {
+                        return b;
+                    }
+                } else {
+                    var c = a;
+                    for (var o=0; o<c.length; o++) {
+                        if (c[o].isDirectory) continue;
+                        var mime = MIMETYPES[c[o].path.toLowerCase().split('.').pop()];
+                        if (mime.split('/')[0] === 'image' && ['cover', 'folder'].includes(c[o].path.toLowerCase().split('/').pop().split('.')[0].split('_')[0])) {
+                            return {mime, path:'/torrentStream?fileName='+encodeURIComponent(c[o].path)+'&stage=step2&stream=on&fetchFile=no&magnet='+magnet};
+                        }
+                    }
+                }
+            }
+        }
+        return processFiles(fileTree(paths));
+    },
     getConcurentFiles: function(currentFile, files, magnet) {
         var paths = [];
         for (var i=0; i<files.length; i++) {

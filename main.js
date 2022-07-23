@@ -84,6 +84,7 @@ videoTitle.replaceAll(' ', '+') + '">Download</a></p>\n';
 
 async function onRequest(req, res, optz, preventDefault) {
     if (preventDefault && typeof preventDefault == 'function') preventDefault();
+    //https://ogp.me
     var host = req.headers.host;
     var url=req.url,method=req.method,consumed=false;
     if (req.url.split('?')[0] === '/torrentStream' && optz.torrent) {
@@ -93,7 +94,7 @@ async function onRequest(req, res, optz, preventDefault) {
     if (req.url === '/worker.js?proxyWorker=true') {
         res.setHeader('content-type', 'text/javascript; chartset=utf-8');
         try {
-            res.end(fs.readFileSync(require.resolve("./worker.js"), "utf8"));
+            res.end(fs.readFileSync(require.resolve("./worker.js")));
         } catch(e) {
             res.end('error');
             console.warn('error reading service worker file', e);
