@@ -52,14 +52,19 @@ module.exports = function(req, res) {
                     break;
                 }
             }
+            if (!file && !isNaN(args.fileIndex)) {
+                var i = parseInt(args.fileIndex);
+                if (files[i]) file = files[i];
+                if (files[i]) fileName = file.path;
+            }
             if (! file) {
                 end('error finding file', res, undefined, 500);
                 engine.destroy();
                 return;
             }
             var ct = MIMETYPES[file.name.split('.').pop()].split('/')[0];
-            if (args.stream === 'on' && args.fetchFile === 'no') {
-                var downloadUrl = '/torrentStream?fileName='+encodeURIComponent(file.path)+'&stage=step2&stream=on&magnet='+magnet;
+            if (args.stream === 'on') {
+                var downloadUrl = '/torrentStream?fileName='+encodeURIComponent(file.path)+'&stage=step2&stream=off&magnet='+magnet;
                 var tagName = ['video', 'audio'].includes(ct) ? ct : ('image' === ct ? 'img' : 'iframe');
                 var html = '<html><head><meta property="og:title" content="'+file.name+'">';
                 if (['image', 'video', 'audio'].includes(ct)) {
@@ -72,6 +77,10 @@ module.exports = function(req, res) {
                     }
                 }
                 html += '<style>.nb{text-decoration:none;display:inline-block;padding:8px 16px;border-radius:12px;transition:0.35s;color:black;}.previous{background-color:#00b512;}.previous:hover{background-color:#ee00ff;}.next{background-color:#ffa600;}.next:hover{background-color:#0099ff;}</style><meta name="viewport" content="width=device-width, initial-scale=1"><title>'+file.name+'</title></head><body><br><br><br><center>';
+                var cover = getFolderImage(files, magnet, fileName);
+                if (cover) {
+                    html += '<img style="object-fit:contain;width:25%;height:40%;border:1px solid red;" src="'+cover.path+'"><br><br>';
+                }
                 html += ('<'+tagName);
                 if (['video', 'image'].includes(ct)) {
                     html += ' height="75%"';
