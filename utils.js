@@ -94,13 +94,13 @@ module.exports = {
                     for (var o=0; o<c.length; o++) {
                         if (c[o].isDirectory) continue;
                         var mime = MIMETYPES[c[o].path.toLowerCase().split('.').pop()];
-                        if (mime.split('/')[0] === 'image' && ['cover', 'folder'].includes(c[o].path.toLowerCase().split('/').pop().split('.')[0].split('_')[0])) {
+                        if (mime.split('/')[0] === 'image' && ['cover', 'folder'].includes(c[o].path.toLowerCase().split('/').pop().split('.')[0].split('_')[0].split(' ')[0])) {
                             return {mime, path:'/torrentStream?fileName='+encodeURIComponent(c[o].path)+'&stage=step2&magnet='+magnet};
                         }
                     }
                 } else {
                     var mime = MIMETYPES[a[i].path.toLowerCase().split('.').pop()];
-                    if (mime.split('/')[0] === 'image' && ['cover', 'folder'].includes(a[i].path.toLowerCase().split('/').pop().split('.')[0].split('_')[0])) {
+                    if (mime.split('/')[0] === 'image' && ['cover', 'folder'].includes(a[i].path.toLowerCase().split('/').pop().split('.')[0].split('_')[0].split(' ')[0])) {
                         return {mime, path:'/torrentStream?fileName='+encodeURIComponent(a[i].path)+'&stage=step2&magnet='+magnet};
                     }
                 }
