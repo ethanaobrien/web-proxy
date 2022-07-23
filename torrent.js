@@ -79,7 +79,7 @@ module.exports = function(req, res) {
                 html += '<style>.nb{text-decoration:none;display:inline-block;padding:8px 16px;border-radius:12px;transition:0.35s;color:black;}.previous{background-color:#00b512;}.previous:hover{background-color:#ee00ff;}.next{background-color:#ffa600;}.next:hover{background-color:#0099ff;}</style><meta name="viewport" content="width=device-width, initial-scale=1"><title>'+file.name+'</title></head><body><br><br><br><center>';
                 var cover = getFolderImage(files, magnet, fileName);
                 if (cover) {
-                    html += '<img style="object-fit:contain;width:25%;height:40%;border:1px solid red;" src="'+cover.path+'"><br><br>';
+                    html += '<img style="object-fit:contain;width:25%;height:40%;" src="'+cover.path+'"><br><br>';
                 }
                 html += ('<'+tagName);
                 if (['video', 'image'].includes(ct)) {
@@ -127,11 +127,7 @@ module.exports = function(req, res) {
                 res.setHeader('content-type', MIMETYPES[file.name.split('.').pop().toLowerCase()]);
             }
             var fileOffset, fileEndOffset;
-            if ((args.stream && args.stream === 'on') || req.headers['range']) {
-                res.setHeader('Content-Disposition', 'inline; filename="'+encodeURIComponent(fileName)+'"');
-            } else {
-                res.setHeader('Content-Disposition', 'attachment; filename="'+encodeURIComponent(fileName)+'"');
-            }
+            res.setHeader('Content-Disposition', 'inline; filename="'+encodeURIComponent(fileName)+'"');
             var code;
             if (req.headers['range']) {
                 console.log('range request');
