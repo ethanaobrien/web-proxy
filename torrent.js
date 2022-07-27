@@ -7,10 +7,11 @@ module.exports = function(req, res) {
     res.writeContinue();
     res.setHeader('Access-Control-Allow-Origin', '*');
     var args = transformArgs(req.url);
-    var stage = args.stage;
-    if (!stage) {
-        stage = 'step1';
-    }
+    var stage = function(args) {
+        if (args.download==='1'&&args.zip==='1') return "dlAsZip";
+        if (args.fileIndex||args.fileName) return "step2";
+        return "step1";
+    }(args);
     if (req.url.split('magnet=').pop().split('&')[0].includes('=')) {
         redirect(req.url.split('magnet=')[0]+'magnet='+encodeURIComponent(req.url.split('magnet=').pop()), res, 301);
         return;
@@ -29,6 +30,7 @@ module.exports = function(req, res) {
     engine.on('ready', function () {
         clearTimeout(ready);
         var files = engine.files;
+        for (var i=0; i<files.length; i++) files[i].path=files[i].path.replaceAll('\\', '/');
         var torrentName = engine.torrent.name;
         if (stage === 'step1') {
             var html = '<html><head><meta property="og:title" content="'+torrentName+'">';
@@ -39,7 +41,7 @@ module.exports = function(req, res) {
             html += '<meta name="viewport" content="width=device-width, initial-scale=1"><title>Download</title></head><body><br><ul><h1>Download</h1><br>';
             html += generateTorrentTree(files, magnet);
             html += '<br>'
-            var downloadUrl2 = '/torrentStream?stage=dlAsZip&magnet='+magnet;
+            var downloadUrl2 = '/torrentStream?download=1&zip=1&magnet='+magnet;
             html += '<br><a style="text-decoration:none" href="'+downloadUrl2+'">Download All As Zip</a></ul><br></body></html>';
             engine.destroy();
             end(html, res, 'text/html; chartset=utf-8');
@@ -64,7 +66,7 @@ module.exports = function(req, res) {
             }
             var ct = MIMETYPES[file.name.split('.').pop()].split('/')[0];
             if (args.stream === 'on') {
-                var downloadUrl = '/torrentStream?fileName='+encodeURIComponent(file.path)+'&stage=step2&stream=off&magnet='+magnet;
+                var downloadUrl = '/torrentStream?fileName='+encodeURIComponent(file.path)+'&magnet='+magnet;
                 var tagName = ['video', 'audio'].includes(ct) ? ct : ('image' === ct ? 'img' : 'iframe');
                 var html = '<html><head><meta property="og:title" content="'+file.name+'">';
                 if (['image', 'video', 'audio'].includes(ct)) {
@@ -127,7 +129,11 @@ module.exports = function(req, res) {
                 res.setHeader('content-type', MIMETYPES[file.name.split('.').pop().toLowerCase()]);
             }
             var fileOffset, fileEndOffset;
-            res.setHeader('Content-Disposition', 'inline; filename="'+encodeURIComponent(fileName)+'"');
+            if (args.download === '1') {
+                res.setHeader('Content-Disposition', 'attachment; filename="'+encodeURIComponent(fileName)+'"');
+            } else {
+                res.setHeader('Content-Disposition', 'inline; filename="'+encodeURIComponent(fileName)+'"');
+            }
             var code;
             if (req.headers['range']) {
                 console.log('range request');

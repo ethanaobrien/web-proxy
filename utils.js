@@ -94,14 +94,14 @@ module.exports = {
                     for (var o=0; o<c.length; o++) {
                         if (c[o].isDirectory) continue;
                         var mime = MIMETYPES[c[o].path.toLowerCase().split('.').pop()];
-                        if (mime.split('/')[0] === 'image' && ['cover', 'folder'].includes(c[o].path.toLowerCase().split('/').pop().split('.')[0].split('_')[0].split(' ')[0])) {
-                            return {mime, path:'/torrentStream?fileName='+encodeURIComponent(c[o].path)+'&stage=step2&magnet='+magnet};
+                        if (mime.split('/')[0] === 'image' && ['cover', 'folder'].includes(c[o].path.toLowerCase().split('/').pop().split('\\').pop().split('.')[0].split('_')[0].split(' ')[0])) {
+                            return {mime, path:'/torrentStream?fileName='+encodeURIComponent(c[o].path)+'&magnet='+magnet};
                         }
                     }
                 } else {
                     var mime = MIMETYPES[a[i].path.toLowerCase().split('.').pop()];
-                    if (mime.split('/')[0] === 'image' && ['cover', 'folder'].includes(a[i].path.toLowerCase().split('/').pop().split('.')[0].split('_')[0].split(' ')[0])) {
-                        return {mime, path:'/torrentStream?fileName='+encodeURIComponent(a[i].path)+'&stage=step2&magnet='+magnet};
+                    if (mime.split('/')[0] === 'image' && ['cover', 'folder'].includes(a[i].path.toLowerCase().split('/').pop().split('\\').pop().split('.')[0].split('_')[0].split(' ')[0])) {
+                        return {mime, path:'/torrentStream?fileName='+encodeURIComponent(a[i].path)+'&magnet='+magnet};
                     }
                 }
             }
@@ -126,12 +126,12 @@ module.exports = {
                 } else if (a[i].path === currentFile) {
                     var out = [];
                     if (a[i+1]) {
-                        out[1] = '/torrentStream?fileName='+encodeURIComponent(a[i+1].path)+'&stage=step2&stream=on&magnet='+magnet;
+                        out[1] = '/torrentStream?fileName='+encodeURIComponent(a[i+1].path)+'&stream=on&magnet='+magnet;
                     } else {
                         out[1] = null;
                     }
                     if (a[i-1]) {
-                        out[0] = '/torrentStream?fileName='+encodeURIComponent(a[i-1].path)+'&stage=step2&stream=on&magnet='+magnet;
+                        out[0] = '/torrentStream?fileName='+encodeURIComponent(a[i-1].path)+'&stream=on&magnet='+magnet;
                     } else {
                         out[0] = null;
                     }
@@ -200,13 +200,13 @@ module.exports = {
             });
             for (var i=0; i<a.length; i++) {
                 if (a[i].isDirectory) {
-                    var q = '/torrentStream?stage=dlAsZip&directory2DL='+a[i].path+'&magnet='+magnet
+                    var q = '/torrentStream?download=1&zip=1&directory2DL='+a[i].path+'&magnet='+magnet
                     out += '<li><span class="caret">'+a[i].name+'</span> (<a href="'+q+'">download</a>) ('+humanFileSize(a[i].size)+')<ul class="nested">';
                     processFiles(a[i].children);
                     out += '</ul></li>';
                 } else {
-                    var downloadUrl = '/torrentStream?fileName='+encodeURIComponent(a[i].path)+'&stage=step2&stream=on&magnet='+magnet;
-                    var downloadUrl2 = '/torrentStream?fileName='+encodeURIComponent(a[i].path)+'&stage=step2&magnet='+magnet;
+                    var downloadUrl = '/torrentStream?fileName='+encodeURIComponent(a[i].path)+'&stream=on&magnet='+magnet;
+                    var downloadUrl2 = '/torrentStream?fileName='+encodeURIComponent(a[i].path)+'&download=1&magnet='+magnet;
                     out += '<li><a style="text-decoration:none" href="'+downloadUrl+'">'+a[i].name+'</a> - <a style="text-decoration:none" href="'+downloadUrl2+'">download</a> ('+humanFileSize(a[i].size)+')</li>';
                 }
             }

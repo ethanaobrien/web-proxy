@@ -30,7 +30,7 @@ module.exports = function(body, contentType, opts, url, reqHost, proxyJSReplace,
         .replaceNC('wss://', 'wss://'+reqHost+'/')
         .replaceNC('integrity', 'integrityy')
         .replaceNC('crossorigin', 'sadfghjj')
-        .replaceAll('magnet:?', '/torrentStream?stage=step1&magnet=')
+        .replaceAll('magnet:?', '/torrentStream?magnet=')
         .replaceNC(btoa(site2Proxy+'/'), btoa('https://'+reqHost+'/'))
         .replaceAll('url(//', 'url(https://')
         .replaceNC(btoa(site2Proxy), btoa('https://'+reqHost));
