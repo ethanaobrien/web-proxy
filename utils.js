@@ -100,6 +100,7 @@ module.exports = {
                         }
                     }
                 } else {
+                    if (q) continue;
                     var mime = MIMETYPES[a[i].path.toLowerCase().split('.').pop()];
                     if (mime.split('/')[0] === 'image' && ['cover', 'folder'].includes(a[i].path.toLowerCase().split('/').pop().split('\\').pop().split('.')[0].split('_')[0].split(' ')[0])) {
                         q = {mime, path:'/torrentStream?fileName='+encodeURIComponent(a[i].path)+'&magnet='+magnet};
