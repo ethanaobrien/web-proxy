@@ -83,6 +83,7 @@ module.exports = {
             a = a.sort(function(a, b) {
                 return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
             });
+            var q;
             for (var i=0; i<a.length; i++) {
                 if (a[i].isDirectory) {
                     var b = processFiles(a[i].children);
@@ -101,10 +102,11 @@ module.exports = {
                 } else {
                     var mime = MIMETYPES[a[i].path.toLowerCase().split('.').pop()];
                     if (mime.split('/')[0] === 'image' && ['cover', 'folder'].includes(a[i].path.toLowerCase().split('/').pop().split('\\').pop().split('.')[0].split('_')[0].split(' ')[0])) {
-                        return {mime, path:'/torrentStream?fileName='+encodeURIComponent(a[i].path)+'&magnet='+magnet};
+                        q = {mime, path:'/torrentStream?fileName='+encodeURIComponent(a[i].path)+'&magnet='+magnet};
                     }
                 }
             }
+            return q;
         }
         return processFiles(fileTree(paths));
     },
