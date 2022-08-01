@@ -130,6 +130,7 @@ async function onRequest(req, res, optz, preventDefault) {
     }
     var a = processUrl(url, host, opts);
     url = a.url;
+    url = removeArg(url, 'cors');
     args = a.args;
     if (!opts.site2Proxy) {
         opts.site2Proxy = new URL('/', url);
@@ -238,6 +239,9 @@ async function onRequest(req, res, optz, preventDefault) {
     res.setHeader('x-frame-options', 'SAMEORIGIN');
     if (vc == 'true' || vc == '1' || nc == 'true' || nc == '1') {
         res.setHeader('content-type', 'text/plain');
+    }
+    if (args.cors=='1') {
+        res.setHeader('Access-Control-Allow-Origin', '*');
     }
     if (resp.isString) {
         //javascript/html parsing
