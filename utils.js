@@ -302,6 +302,7 @@ module.exports = {
             opts.useHiddenPage = (cookies.split('proxySettings=').pop().split(';')[0].split('_')[3] === '1');
             opts.replaceExternalUrls = (cookies.split('proxySettings=').pop().split(';')[0].split('_')[4] === '1');
             opts.allowAdultContent = (cookies.split('proxySettings=').pop().split(';')[0].split('_')[5] === '1');
+            opts.noChange = (cookies.split('proxySettings=').pop().split(';')[0].split('_')[6] === '1');
         }
         return opts;
     },
