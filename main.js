@@ -171,9 +171,10 @@ async function onRequest(req, res, optz, preventDefault) {
     if (!opts.proxyJSReplace) {
         opts.proxyJSReplace = true;
     }
-    var vc = args.vc, nc = args.nc;
-    if (typeof req.headers.cookie === 'string' && req.headers.cookie.includes('nochange')) {
-        if (['1', 'true'].includes(req.headers.cookie.split('nochange: ').pop().split(';')[0])) nc=true;
+    let vc = args.vc, nc = args.nc;
+    
+    if (opts.noChange) {
+        nc = true;
     }
     var reqBody = {};
     if (!consumed) {
@@ -249,7 +250,7 @@ async function onRequest(req, res, optz, preventDefault) {
     if (resp.isString) {
         //javascript/html parsing
         var body = '';
-        if (!nc || (nc != '1' && nc != 'true')) {
+        if (nc !== '1' && nc !== 'true' && nc !== true) {
             body = parseTextFile(resp.body, resp.contentType, opts, url, host, opts.proxyJSReplace, optz);
         } else {
             body = resp.body;
