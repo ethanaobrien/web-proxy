@@ -241,7 +241,7 @@ async function onRequest(req, res, optz, preventDefault) {
     }
     //res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('x-frame-options', 'SAMEORIGIN');
-    if (vc == 'true' || vc == '1' || nc == 'true' || nc == '1') {
+    if (vc == 'true' || vc == '1') {
         res.setHeader('content-type', 'text/plain');
     }
     if (args.cors=='1') {
