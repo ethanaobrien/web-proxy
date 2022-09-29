@@ -172,6 +172,9 @@ async function onRequest(req, res, optz, preventDefault) {
         opts.proxyJSReplace = true;
     }
     var vc = args.vc, nc = args.nc;
+    if (typeof req.headers.cookie === 'string' && req.headers.cookie.includes('nochange')) {
+        if (['1', 'true'].includes(req.headers.cookie.split('nochange: ').pop().split(';')[0])) nc=true;
+    }
     var reqBody = {};
     if (!consumed) {
         if (req.headers['content-type'] && req.headers['content-type'].includes('x-www-form-urlencoded')) {
