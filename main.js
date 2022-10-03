@@ -12,7 +12,7 @@ if (!global.setupWebsocket) global.setupWebsocket = require("./websocket.js");
 if (!global.urlShortener) global.urlShortener = require("./urlShortener.js");
 if (!global.ytdl) global.ytdl = require('youtube-downloader-ethanaobrien');
 if (!global.fs) global.fs = require('fs');
-if (!global.net) global.nte = require('net');
+if (!global.net) global.net = require('net');
 var a = require("./utils.js");
 for (var k in a) {
     if (!global[k]) global[k] = a[k];
