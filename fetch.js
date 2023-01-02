@@ -1,10 +1,10 @@
 global.parseSetCookie = function(cookie, hostname, isAbsoluteProxy) {
-    var cookieHeader;
+    let cookieHeader;
     if (cookie.includes('Domain=')) {
         cookieHeader = cookie.split('Domain=').pop().split(';')[0];
         cookie = cookie.replaceAll('Domain='+cookie.split('Domain=').pop().split(';')[0]+';', '').replaceAll('  ', ' ');
     }
-    if (! cookieHeader) {
+    if (!cookieHeader) {
         cookieHeader = hostname;
     }
     if (isAbsoluteProxy) {
@@ -16,13 +16,11 @@ global.parseSetCookie = function(cookie, hostname, isAbsoluteProxy) {
 
 global.parseResCookie = function(cookie, hostname, isAbsoluteProxy) {
     cookie = cookie.trim();
-    if (! cookie.startsWith('ck_') || isAbsoluteProxy) {
-        return cookie.trim();
-    }
-    var parts = cookie.split('_');
-    var httpOnly = parseInt(parts[1]);
-    var allowHost = parts[2];
-    var reqHost = new RegExp(allowHost);
+    if (! cookie.startsWith('ck_') || isAbsoluteProxy) return cookie.trim();
+    let parts = cookie.split('_'),
+        httpOnly = parseInt(parts[1]),
+        allowHost = parts[2],
+        reqHost = new RegExp(allowHost);
     if (hostname.match(reqHost) !== null) {
         return cookie.replace('ck_'+parts[1]+'_'+parts[2]+'_', '').trim();
     }
@@ -31,23 +29,23 @@ global.parseResCookie = function(cookie, hostname, isAbsoluteProxy) {
 
 module.exports = function(method, url, headers, body, opts, reqHost, forceText) {
     return new Promise(function(resolve, reject) {
-        var newHeaders = {};
-        var {hostname} = new URL(url);
+        let newHeaders = {};
+        let {hostname} = new URL(url);
         if (headers) {
-            for (var k in headers) {
+            for (const k in headers) {
                 if (k.startsWith('x-replit') || k === 'accept-encoding' || k.startsWith('sec-')) {
                     continue;
                 }
                 if (k === 'cookie') {
-                    var cookies = [];
-                    var ck = headers[k].split(';');
-                    for (var i=0; i<ck.length; i++) {
+                    let cookies = [];
+                    let ck = headers[k].split(';');
+                    for (let i=0; i<ck.length; i++) {
                         if (ck[i].includes('proxySettings')) {
                             continue;
                         }
-                        var a = parseResCookie(ck[i], hostname, opts.isAbsoluteProxy);
-                        if (a !== null) {
-                            cookies.push(a);
+                        let result = parseResCookie(ck[i], hostname, opts.isAbsoluteProxy);
+                        if (result !== null) {
+                            cookies.push(result);
                         }
                     }
                     newHeaders[k] = cookies.join('; ');
@@ -66,9 +64,9 @@ module.exports = function(method, url, headers, body, opts, reqHost, forceText) 
             }
         }
         newHeaders['host'] = hostname;
-        var protReq = url.startsWith('https:') ? https : http;
-        var req = protReq.request(url, {method: method});
-        for (var k in newHeaders) {
+        let protReq = url.startsWith('https:') ? https : http;
+        let req = protReq.request(url, {method: method});
+        for (const k in newHeaders) {
             req.setHeader(k, newHeaders[k]);
         }
         if (body && !body.stream && body.data.byteLength !== 0) {
@@ -94,7 +92,7 @@ module.exports = function(method, url, headers, body, opts, reqHost, forceText) 
                 });
                 return;
             }
-            var body = await consumeBody(res);
+            let body = await consumeBody(res);
             body = body.toString();
             resolve({
                 isString: true,
