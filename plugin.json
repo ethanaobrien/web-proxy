@@ -1,27 +1,28 @@
 {
+    "id": "proxy",
     "name": "Web Proxy",
-    "id": "web-proxy",
-    "version": "1.0.0",
-    "options": [{
-        "id": "debug",
-        "name": "Debug",
-        "type": "bool",
-        "default": false
-    },{
-        "id": "allowAdultContent",
-        "name": "Adult Content",
-        "type": "bool",
-        "default": false
-    },{
+    "script": "plugin.js",
+    "options": [
+      {
         "id": "torrent",
         "name": "Allow Torrenting",
+        "description": "Allow torrent streaming. Only for the web interface.",
+        "type": "bool",
+        "default": true
+      },
+      {
+        "id": "allowAdultContent",
+        "name": "Adult Content",
+        "description": "Allow adult content. Only for the web interface.",
         "type": "bool",
         "default": false
-    },{
+      },
+      {
         "id": "forceSite",
         "name": "Force Site",
+        "description": "Force Website to proxy. Only for the web interface.",
         "type": "string",
-        "default": false
-    }],
-    "script": "main.js"
-}
+        "default": "https://simplewebserver.org/"
+      }
+    ]
+  }

@@ -21,7 +21,7 @@ for (const k in a) {
 //if you want to force a site to proxy, put url here
 //leave empty if not. Will set the client to absolute proxy mode
 
-global.sites = [ //no '/' at end
+global.sites = [
     //site, isBuggy, display_name
     ['https://simplewebserver.org/', false, 'Simple Web Server']
 ]
