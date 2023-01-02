@@ -88,7 +88,7 @@ if (useHTTPS) {
     server = require('http').createServer();
 }
 server.on('request', function(req, res) {
-    main.onRequest(req, res, {debug:false, allowAdultContent:true, yt:true, torrent:true, forceSite});
+    main.onRequest(req, res, {debug:true, allowAdultContent:true, yt:true, torrent:true, forceSite});
 });
 main.onStart(server);
 

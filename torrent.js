@@ -1,4 +1,5 @@
 module.exports = function(req, res) {
+    //https://ogp.me
     if (!req.url.includes('magnet=')) {
         res.writeHeader(400);
         res.end('invalid request');
