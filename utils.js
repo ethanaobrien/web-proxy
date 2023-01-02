@@ -7,14 +7,14 @@ if (! String.prototype.replaceAll) {
 }
 
 String.prototype.replaceNC = function(a, b) {
-    var reg = new RegExp(a, "ig");
+    let reg = new RegExp(a, "ig");
     return this.replaceAll(reg, b);
 }
 
 module.exports = {
     consumeBody: function(res) {
         return new Promise(function(resolve, reject) {
-            var body = Buffer.from('');
+            let body = Buffer.from('');
             res.on('data', (chunk) => {
                 if (chunk) {
                     body = Buffer.concat([body, chunk])
@@ -31,14 +31,14 @@ module.exports = {
         })
     },
     transformArgs: function(url) {
-        var args = {};
-        var idx = url.indexOf('?');
+        let args = {};
+        let idx = url.indexOf('?');
         if (idx != -1) {
-            var s = url.slice(idx+1);
-            var parts = s.split('&');
-            for (var i=0; i<parts.length; i++) {
-                var p = parts[i];
-                var idx2 = p.indexOf('=');
+            let s = url.slice(idx+1);
+            let parts = s.split('&');
+            for (let i=0; i<parts.length; i++) {
+                let p = parts[i];
+                let idx2 = p.indexOf('=');
                 try {
                     args[decodeURIComponent(p.slice(0,idx2))] = decodeURIComponent(p.slice(idx2+1,s.length));
                 } catch(e) {}
@@ -47,17 +47,17 @@ module.exports = {
         return args;
     },
     removeArg: function(url, argName) {
-        if (! url.split('?').pop().includes(argName+'=')) {
+        if (!url.split('?').pop().includes(argName+'=')) {
             return url;
         }
         return url.replace(argName+url.split('?').pop().split(argName).pop().split('&')[0], '')
     },
     check4Redirects: function(url, allRedirects) {
         return new Promise(function(resolve, reject) {
-            var protReq = url.startsWith('https:') ? https : http;
+            let protReq = url.startsWith('https:') ? https : http;
             protReq.get(url, function(res) {
                 try {
-                    var {statusCode} = res;
+                    let {statusCode} = res;
                     if ([301, 302, 307].includes(statusCode) &&
                         res.headers['location'] &&
                         (allRedirects ||(new URL(res.headers['location'])).pathname === '/')) {
@@ -75,33 +75,33 @@ module.exports = {
         })
     },
     getFolderImage: function(files, magnet, fileName) {
-        var paths = [];
-        for (var i=0; i<files.length; i++) {
+        let paths = [];
+        for (let i=0; i<files.length; i++) {
             paths.push(files[i].path);
         }
         function processFiles(a) {
             a = a.sort(function(a, b) {
                 return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
             });
-            var q;
-            for (var i=0; i<a.length; i++) {
+            let q;
+            for (let i=0; i<a.length; i++) {
                 if (a[i].isDirectory) {
-                    var b = processFiles(a[i].children);
+                    let b = processFiles(a[i].children);
                     if (b) {
                         return b;
                     }
                 } else if (fileName && a[i].path === fileName) {
-                    var c = a;
-                    for (var o=0; o<c.length; o++) {
+                    let c = a;
+                    for (let o=0; o<c.length; o++) {
                         if (c[o].isDirectory) continue;
-                        var mime = MIMETYPES[c[o].path.toLowerCase().split('.').pop()];
+                        let mime = MIMETYPES[c[o].path.toLowerCase().split('.').pop()];
                         if (mime.split('/')[0] === 'image' && ['cover', 'folder'].includes(c[o].path.toLowerCase().split('/').pop().split('\\').pop().split('.')[0].split('_')[0].split(' ')[0])) {
                             return {mime, path:'/torrentStream?fileName='+encodeURIComponent(c[o].path)+'&magnet='+magnet};
                         }
                     }
                 } else {
                     if (q) continue;
-                    var mime = MIMETYPES[a[i].path.toLowerCase().split('.').pop()];
+                    let mime = MIMETYPES[a[i].path.toLowerCase().split('.').pop()];
                     if (mime.split('/')[0] === 'image' && ['cover', 'folder'].includes(a[i].path.toLowerCase().split('/').pop().split('\\').pop().split('.')[0].split('_')[0].split(' ')[0])) {
                         q = {mime, path:'/torrentStream?fileName='+encodeURIComponent(a[i].path)+'&magnet='+magnet};
                     }
@@ -112,22 +112,22 @@ module.exports = {
         return processFiles(fileTree(paths));
     },
     getConcurentFiles: function(currentFile, files, magnet) {
-        var paths = [];
-        for (var i=0; i<files.length; i++) {
+        let paths = [];
+        for (let i=0; i<files.length; i++) {
             paths.push(files[i].path);
         }
         function processFiles(a) {
             a = a.sort(function(a, b) {
                 return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
             });
-            for (var i=0; i<a.length; i++) {
+            for (let i=0; i<a.length; i++) {
                 if (a[i].isDirectory) {
-                    var b = processFiles(a[i].children);
+                    let b = processFiles(a[i].children);
                     if (b) {
                         return b;
                     }
                 } else if (a[i].path === currentFile) {
-                    var out = [];
+                    let out = [];
                     if (a[i+1]) {
                         out[1] = '/torrentStream?fileName='+encodeURIComponent(a[i+1].path)+'&stream=on&magnet='+magnet;
                     } else {
@@ -145,10 +145,10 @@ module.exports = {
         return processFiles(fileTree(paths));
     },
     fileTree: function(paths) {
-        var result = [];
-        var level = {result};
+        let result = [];
+        let level = {result};
         paths.forEach(info => {
-            var path=info.path, size=info.size;
+            let path=info.path, size=info.size;
             if (typeof info == 'string') path = info;
             path.split('/').reduce((r, name, i, a) => {
                 if(!r[name]) {
@@ -159,8 +159,8 @@ module.exports = {
             }, level)
         })
         function folderSizes(a) {
-            var size = 0;
-            for (var i=0; i<a.length; i++) {
+            let size = 0;
+            for (let i=0; i<a.length; i++) {
                 if (a[i].isFile) {
                     size += a[i].size;
                 } else {
@@ -170,7 +170,7 @@ module.exports = {
             return size;
         }
         function process(a) {
-            for (var i=0; i<a.length; i++) {
+            for (let i=0; i<a.length; i++) {
                 if (a[i].children.length > 0) {
                     a[i].isFile = false;
                     a[i].isDirectory = true;
@@ -191,31 +191,31 @@ module.exports = {
         return process(result);
     },
     generateTorrentTree: function(files, magnet) {
-        var paths = [];
-        for (var i=0; i<files.length; i++) {
+        let paths = [];
+        for (let i=0; i<files.length; i++) {
             paths.push({path:files[i].path,size:files[i].length});
         }
-        var result = fileTree(paths);
-        var out = '<style>ul,#myUL{list-style-type:none}#myUL{margin:0;padding:0}.caret{cursor:pointer;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none}.caret::before{content:"\\25B6";color:#000;display:inline-block;margin-right:6px}.caret-down::before{-ms-transform:rotate(90deg);-webkit-transform:rotate(90deg);transform:rotate(90deg)}.nested{display:none}.active{display:block}</style><ul id="myUL">';
+        let result = fileTree(paths);
+        let out = '<style>ul,#myUL{list-style-type:none}#myUL{margin:0;padding:0}.caret{cursor:pointer;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none}.caret::before{content:"\\25B6";color:#000;display:inline-block;margin-right:6px}.caret-down::before{-ms-transform:rotate(90deg);-webkit-transform:rotate(90deg);transform:rotate(90deg)}.nested{display:none}.active{display:block}</style><ul id="myUL">';
         function processFiles(a) {
             a = a.sort(function(a, b) {
                 return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
             });
-            for (var i=0; i<a.length; i++) {
+            for (let i=0; i<a.length; i++) {
                 if (a[i].isDirectory) {
-                    var q = '/torrentStream?download=1&zip=1&directory2DL='+a[i].path+'&magnet='+magnet
+                    let q = '/torrentStream?download=1&zip=1&directory2DL='+a[i].path+'&magnet='+magnet
                     out += '<li><span class="caret">'+a[i].name+'</span> (<a href="'+q+'">download</a>) ('+humanFileSize(a[i].size)+')<ul class="nested">';
                     processFiles(a[i].children);
                     out += '</ul></li>';
                 } else {
-                    var downloadUrl = '/torrentStream?fileName='+encodeURIComponent(a[i].path)+'&stream=on&magnet='+magnet;
-                    var downloadUrl2 = '/torrentStream?fileName='+encodeURIComponent(a[i].path)+'&download=1&magnet='+magnet;
+                    let downloadUrl = '/torrentStream?fileName='+encodeURIComponent(a[i].path)+'&stream=on&magnet='+magnet;
+                    let downloadUrl2 = '/torrentStream?fileName='+encodeURIComponent(a[i].path)+'&download=1&magnet='+magnet;
                     out += '<li><a style="text-decoration:none" href="'+downloadUrl+'">'+a[i].name+'</a> - <a style="text-decoration:none" href="'+downloadUrl2+'">download</a> ('+humanFileSize(a[i].size)+')</li>';
                 }
             }
         }
         processFiles(result);
-        out += '</ul><script>for(var toggler=document.getElementsByClassName("caret"),i=0;i<toggler.length;i++)toggler[i].addEventListener("click",function(){this.parentElement.querySelector(".nested").classList.toggle("active"),this.classList.toggle("caret-down")});</script>';
+        out += '</ul><script>for(let toggler=document.getElementsByClassName("caret"),i=0;i<toggler.length;i++)toggler[i].addEventListener("click",function(){this.parentElement.querySelector(".nested").classList.toggle("active"),this.classList.toggle("caret-down")});</script>';
         return out;
     },
     bodyBuffer: function(body) {
@@ -228,7 +228,7 @@ module.exports = {
             atob('eHZpZGVvcw=='),
             atob('ZnVjaw==')
         ];
-        for (var i=0; i<keywords.length; i++) {
+        for (let i=0; i<keywords.length; i++) {
             if (url.toLowerCase().includes(keywords[i])) {
                 return true;
             }
@@ -237,12 +237,12 @@ module.exports = {
     },
     createHttpHeader: function(line, headers) {
         return Object.keys(headers).reduce(function(head, key) {
-            var value = headers[key];
+            let value = headers[key];
             if (!Array.isArray(value)) {
                 head.push(key + ': ' + value);
                 return head;
             }
-            for (var i = 0; i < value.length; i++) {
+            for (let i = 0; i < value.length; i++) {
                 head.push(key + ': ' + value[i]);
             }
             return head;
@@ -264,7 +264,7 @@ module.exports = {
         if (url.startsWith('http://http:/')) {
             url = url.replace('http://http:/', 'http:/');
         }
-        var args = transformArgs(url);
+        let args = transformArgs(url);
         url = removeArg(url, 'vc');
         url = removeArg(url, 'nc');
         url = removeArg(url, 'video');
@@ -294,7 +294,7 @@ module.exports = {
         return bytes.toFixed(1) + ' ' + units[u];
     },
     getOpts: function(cookies) {
-        var opts = {};
+        let opts = {};
         if (cookies && cookies.includes('proxySettings=')) {
             opts.site2Proxy = decodeURIComponent(cookies.split('proxySettings=').pop().split(';')[0].split('_')[0]);
             opts.proxyJSReplace = (cookies.split('proxySettings=').pop().split(';')[0].split('_')[1] === '1');

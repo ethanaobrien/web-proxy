@@ -95,7 +95,7 @@ module.exports = async function(req, res, optz) {
                 adultContent = true;
             }
             if (!error) {
-                res.setHeader('set-cookie', 'proxySettings='+(args.custom?encodeURIComponent(args.custom):args.site)+'_'+(args.JSReplaceURL?'1':'0')+'_'+(args.absoluteSite?'1':'0')+'_'+(args.hidden?'1':'0')+'_'+(args.replaceExternal?'1':'0')+'_'+(args.confirmation?'1':'0')+'; '+(clearOnExit?'Max-Age=2592000;':'')+' HttpOnly');
+                res.setHeader('set-cookie', 'proxySettings='+(args.custom?encodeURIComponent(args.custom):args.site)+'_'+(args.JSReplaceURL?'1':'0')+'_'+(args.absoluteSite?'1':'0')+'_'+(args.hidden?'1':'0')+'_'+(args.replaceExternal?'1':'0')+'_'+(args.confirmation?'1':'0')+'; '+(args.clearOnExit?'Max-Age=2592000;':'')+' HttpOnly');
                 if (args.shareURL) {
                     let {hostname} = new URL(args.custom?args.custom:decodeURIComponent(args.site));
                     res.setHeader('content-type', 'text/html; chartset=utf-8');

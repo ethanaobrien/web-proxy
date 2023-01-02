@@ -1,13 +1,12 @@
 module.exports = function(body, contentType, opts, url, reqHost, proxyJSReplace, optz) {
-    var {site2Proxy,replaceExternalUrls} = opts;
-    var funcString = '\nvoid 0!==typeof window&&window.addEventListener("DOMContentLoaded",function(){var t,e,n;function o(t){try{t.startsWith("/")||new URL(t).hostname===window.location.hostname||(t="/"+t)}catch(e){!t.startsWith("/")&&t.startsWith("http")&&(t="/"+t)}return t}window.checkInterval||("serviceWorker"in navigator&&async function(){navigator.serviceWorker.register("/worker.js?proxyWorker=true"),navigator.serviceWorker.register=function(){return null},await navigator.serviceWorker.ready}(),window.checkInterval=setInterval(function(){document.querySelectorAll("svg").forEach(t=>{t&&t.attributes&&t.attributes["aria-label"]&&t.attributes["aria-label"].textContent&&(t.innerHTML=t.attributes["aria-label"].textContent)})},200),window.fetch&&(window.fetch=(t=window.fetch,function(e,n){return n&&n.integrity&&delete n.integrity,t(o(e),n)})),window.XMLHttpRequest&&(window.XMLHttpRequest.prototype.open=(e=window.XMLHttpRequest.prototype.open,function(t,n,r,i,a){return e.apply(this,[t,o(n),r,i,a])})),window.WebSocket&&(window.WebSocket=(n=window.WebSocket,function(t,e){try{var{hostname:o}=new URL(t);!o===window.location.host&&(t=(e="https:"===window.location.protocol?"wss":"ws")+"://"+t)}catch(t){}return new n(t,e)})))});\n';
-    var date = new Date();
-    var origBody = body;
-    var {hostname} = new URL(url);
-    var hn2 = hostname;
-    var {hostname} = new URL(site2Proxy);
-    var startWithSite = ((new URL(url)).hostname !== hostname);
-    var startUrl = '';
+    let {site2Proxy,replaceExternalUrls} = opts;
+    let funcString = '\nwindow.addEventListener("DOMContentLoaded",function(){if(!window.checkInterval){var t,e,n;window.checkInterval=setInterval(function(){document.querySelectorAll("svg").forEach(t=>{t&&t.attributes&&t.attributes["aria-label"]&&t.attributes["aria-label"].textContent&&(t.innerHTML=t.attributes["aria-label"].textContent)})},200),window.fetch&&(window.fetch=(t=window.fetch,function(e,n){return n&&n.integrity&&delete n.integrity,t(o(e),n)})),window.XMLHttpRequest&&(window.XMLHttpRequest.prototype.open=(e=window.XMLHttpRequest.prototype.open,function(t,n,r,a,i){return e.apply(this,[t,o(n),r,a,i])})),window.WebSocket&&(window.WebSocket=(n=window.WebSocket,function(t,e){try{let{hostname:o}=new URL(t);!o===window.location.host&&(t=("https:"===window.location.protocol?"wss":"ws")+"://"+t)}catch(r){}return new n(t,e)}))}function o(t){try{t.startsWith("/")||new URL(t).hostname===window.location.hostname||(t="/"+t)}catch(e){!t.startsWith("/")&&t.startsWith("http")&&(t="/"+t)}return t}});\n';
+    let date = new Date(),
+        origBody = body,
+        hn2 = new URL(url).hostname,
+        hostname = new URL(site2Proxy).hostname,
+        startWithSite = ((new URL(url)).hostname !== hostname),
+        startUrl = '';
     if (startWithSite) {
         startUrl = (new URL('/', url)).toString();
         startUrl = startUrl.substring(0, startUrl.length-1);
@@ -35,8 +34,8 @@ module.exports = function(body, contentType, opts, url, reqHost, proxyJSReplace,
         .replaceAll('url(//', 'url(https://')
         .replaceNC(btoa(site2Proxy), btoa('https://'+reqHost));
     if (contentType.includes('html')) {
-        var a = body.split('src');
-        for (var i=1; i<a.length; i++) {
+        let a = body.split('src');
+        for (let i=1; i<a.length; i++) {
             if (a[i].replaceAll(' ', '').replaceAll('"', '').replaceAll("'", '').trim().startsWith('=//')) {
                 a[i] = a[i].replace('//', 'https://');
             }
@@ -45,16 +44,16 @@ module.exports = function(body, contentType, opts, url, reqHost, proxyJSReplace,
             }
         }
         body = a.join('src');
-        var a = body.split('//');
-        for (var i=1; i<a.length; i++) {
+        a = body.split('//');
+        for (let i=1; i<a.length; i++) {
             if ((a[i-1].endsWith('"') || a[i-1].endsWith("'")) &&
                 (a[i].split('\n')[0].includes('"') || a[i].split('\n')[0].includes("'"))) {
                 a[i-1]+='https:';
             }
         }
         body = a.join('//');
-        var a = body.split('http');
-        for (var i=1; i<a.length; i++) {
+        a = body.split('http');
+        for (let i=1; i<a.length; i++) {
             if ((a[i].startsWith('://') ||
                  a[i].startsWith('s://') ||
                  ((a[i].startsWith(':\\/\\/') ||
@@ -66,8 +65,8 @@ module.exports = function(body, contentType, opts, url, reqHost, proxyJSReplace,
             }
         }
         body = a.join('http');
-        var a = body.split('href');
-        for (var i=1; i<a.length; i++) {
+        a = body.split('href');
+        for (let i=1; i<a.length; i++) {
             if (startUrl && a[i].replaceAll('=', '').replaceAll('"', '').replaceAll("'", '').trim().startsWith('/') && !(a[i].replaceAll('=', '').replaceAll('"', '').replaceAll("'", '').trim().startsWith('//'))) {
                 a[i] = a[i].replace('/', '/'+startUrl+'/');
             }
@@ -88,16 +87,15 @@ module.exports = function(body, contentType, opts, url, reqHost, proxyJSReplace,
         body = '<script>'+funcString+'</script>\n'+body;
         return body.replaceAll('/https://', '/https:/').replaceAll('/http://', '/https:/');
     } else if (contentType.includes('x-www-form-urlencoded')) {
-        var {hostname} = new URL(url);
-        var h = hostname;
-        var {hostname} = new URL(site2Proxy);
-        var a = body.split('&')
-        var changed = false;
-        for (var i=0; i<a.length; i++) {
-            var b = a[i].split('=');
-            for (var j=0; j<b.length; j++) {
-                var c = b[j].split('+');
-                for (var k=0; k<c.length; k++) {
+        let h = new URL(url).hostname;
+        hostname = new URL(site2Proxy).hostname;
+        let a = body.split('&')
+        let changed = false;
+        for (let i=0; i<a.length; i++) {
+            let b = a[i].split('=');
+            for (let j=0; j<b.length; j++) {
+                let c = b[j].split('+');
+                for (let k=0; k<c.length; k++) {
                     c[k] = encodeURIComponent(decodeURIComponent(c[k]).replaceNC(hostname, h));
                     if (decodeURIComponent(c[k]).includes(h)) {
                         changed = true;
@@ -117,8 +115,8 @@ module.exports = function(body, contentType, opts, url, reqHost, proxyJSReplace,
         return body;
     } else {
         if (proxyJSReplace) {
-            var a = body.split('//');
-            for (var i=1; i<a.length; i++) {
+            let a = body.split('//');
+            for (let i=1; i<a.length; i++) {
                 if ((a[i-1].endsWith('"') && !a[i].split('"')[0].includes(' ')) ||
                     (a[i-1].endsWith("'") && !a[i].split("'")[0].includes(' '))) {
                     a[i-1]+='https:';
@@ -143,15 +141,6 @@ module.exports = function(body, contentType, opts, url, reqHost, proxyJSReplace,
     if (typeof window !== undefined) {
         window.addEventListener("DOMContentLoaded", function() {
             if (window.checkInterval) return;
-            if ('serviceWorker' in navigator) {
-                (async function() {
-                    navigator.serviceWorker.register("/worker.js?proxyWorker=true");
-                    navigator.serviceWorker.register = function() {
-                        return null;
-                    }
-                    await navigator.serviceWorker.ready;
-                })();
-            }
             window.checkInterval = setInterval(function() {
                 document.querySelectorAll("svg").forEach(e => {
                     if (e && e.attributes && e.attributes["aria-label"] && e.attributes["aria-label"].textContent) {
@@ -190,9 +179,9 @@ module.exports = function(body, contentType, opts, url, reqHost, proxyJSReplace,
                 window.WebSocket = (function(oldSocket) {
                     return function(url, prot) {
                         try {
-                            var {hostname} = new URL(url);
+                            let {hostname} = new URL(url);
                             if (!hostname === window.location.host) {
-                                var prot = (window.location.protocol === 'https:') ? 'wss' : 'ws';
+                                let prot = (window.location.protocol === 'https:') ? 'wss' : 'ws';
                                 url = prot+'://'+url;
                             }
                         } catch(e) {}

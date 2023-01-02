@@ -25,7 +25,7 @@ function createCrypto() {
     cert.validity.notBefore = new Date();
     cert.validity.notAfter = new Date();
     cert.validity.notAfter.setFullYear(cert.validity.notBefore.getFullYear() + 10);
-    var attrs = [{
+    const attrs = [{
         name: 'commonName',
         value: cn
     }, {
@@ -79,7 +79,7 @@ function createCrypto() {
     console.log('certificate created for \"' + cn + '\": \n');
 };
 
-var main = require('./main.js');
+const main = require('./main.js');
 let server;
 if (useHTTPS) {
     const crypto = createCrypto();

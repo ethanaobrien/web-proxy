@@ -4,23 +4,23 @@ module.exports = function(server) {
         socket.setTimeout(0);
         socket.setNoDelay(true);
         socket.setKeepAlive(true, 0);
-        var newHeaders = {};
-        var {hostname,pathname,search} = new URL('wss:/'+req.url);
-        var headers = req.headers;
-        var opts = getOpts(req.headers.cookie);
+        let newHeaders = {};
+        let {hostname,pathname,search} = new URL('wss:/'+req.url);
+        let headers = req.headers;
+        let opts = getOpts(req.headers.cookie);
         if (headers) {
-            for (var k in headers) {
+            for (let k in headers) {
                 if (k.startsWith('x-replit') || k === 'accept-encoding') {
                     continue;
                 }
                 if (k === 'cookie') {
-                    var cookies = [];
-                    var ck = headers[k].split(';');
-                    for (var i=0; i<ck.length; i++) {
+                    let cookies = [];
+                    let ck = headers[k].split(';');
+                    for (let i=0; i<ck.length; i++) {
                         if (ck[i].includes('proxySettings')) {
                             continue;
                         }
-                        var a = parseResCookie(ck[i], hostname, opts.isAbsoluteProxy);
+                        let a = parseResCookie(ck[i], hostname, opts.isAbsoluteProxy);
                         if (a !== null) {
                             cookies.push(a);
                         }
@@ -35,13 +35,13 @@ module.exports = function(server) {
             }
         }
         newHeaders['host'] = hostname;
-        var origin = '';
+        let origin = '';
         if (req.headers.cookie && req.headers.cookie.includes('proxySettings=')) {
             origin = opts.site2Proxy;
         }
         newHeaders['origin'] = origin;
-        var proxyReq = https.request('https:/'+req.url);
-        for (var k in newHeaders) {
+        let proxyReq = https.request('https:/'+req.url);
+        for (let k in newHeaders) {
             proxyReq.setHeader(k, newHeaders[k]);
         }
         proxyReq.on('response', function(res) {
