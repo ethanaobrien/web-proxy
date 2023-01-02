@@ -1,15 +1,16 @@
 module.exports = async function(req, res, optz) {
-    var errMsg = '', adultContent = false;
+    let errMsg = '',
+        adultContent = false;
     if (typeof optz.forceSite !== undefined &&
         typeof optz.forceSite == 'string' &&
         optz.forceSite.trim() !== '') {
-        var site = optz.forceSite;
+        let site = optz.forceSite;
         try {
-            var b;
-            while (b = await check4Redirects(site)) {
-                site = b;
+            let result;
+            while (result = await check4Redirects(site)) {
+                site = result;
             }
-            var newURL = new URL('/', site);
+            let newURL = new URL('/', site);
             newURL = newURL.toString();
             if (newURL.endsWith('/')) {
                 newURL = newURL.substring(0, newURL.length-1);
@@ -26,7 +27,7 @@ module.exports = async function(req, res, optz) {
         res.end();
         return;
     }
-    var args,body;
+    let args, body;
     if (req.url.includes('?') || req.method.toLowerCase() === 'post') {
         if (req.method.toLowerCase() === 'post') {
             body = await consumeBody(req);
@@ -42,9 +43,9 @@ module.exports = async function(req, res, optz) {
             args.custom = args.custom.substring(1);
         }
         if ((args.site || args.custom)) {
-            var error = false;
-            var path2Redir2 = '/';
-            var opts = {};
+            let error = false,
+                path2Redir2 = '/',
+                opts = {};
             if (req.headers.cookie) {
                 opts = getOpts(req.headers.cookie);
             }
@@ -60,22 +61,22 @@ module.exports = async function(req, res, optz) {
                             args.custom = 'http://'+args.custom;
                         }
                     }
-                    var isNotGood = isNotGoodSite(args.custom?args.custom:decodeURIComponent(args.site));
+                    let isNotGood = isNotGoodSite(args.custom?args.custom:decodeURIComponent(args.site));
                     if (((!args.confirmation && optz.allowAdultContent) && isNotGood) || (!optz.allowAdultContent && isNotGood)) {
                         error = true;
                         adultContent = true;
                     }
                     if (!error) {
-                        var b;/*
-                        while (b = await check4Redirects(args.custom)) {
-                            args.custom = b;
-                        }*/
-                        var a = new URL(args.custom);
-                        if (a.hostname.includes('127.0') || a.hostname.includes('192.168')) {
+                        let result;
+                        while (result = await check4Redirects(args.custom)) {
+                            args.custom = result;
+                        }
+                        result = new URL(args.custom);
+                        if (result.hostname.includes('127.0') || result.hostname.includes('192.168')) {
                             throw new Error('Cannot use local url');
                         }
-                        path2Redir2 = a.pathname+a.search;
-                        var newURL = new URL('/', args.custom);
+                        path2Redir2 = result.pathname+result.search;
+                        let newURL = new URL('/', args.custom);
                         newURL = newURL.toString();
                         if (newURL.endsWith('/')) {
                             newURL = newURL.substring(0, newURL.length-1);
@@ -88,7 +89,7 @@ module.exports = async function(req, res, optz) {
                     errMsg = 'invalid URL';
                 }
             }
-            var isNotGood = isNotGoodSite(args.custom?args.custom:decodeURIComponent(args.site));
+            let isNotGood = isNotGoodSite(args.custom?args.custom:decodeURIComponent(args.site));
             if (((!args.confirmation && optz.allowAdultContent) && isNotGood) || (!optz.allowAdultContent && isNotGood)) {
                 error = true;
                 adultContent = true;
@@ -96,14 +97,14 @@ module.exports = async function(req, res, optz) {
             if (!error) {
                 res.setHeader('set-cookie', 'proxySettings='+(args.custom?encodeURIComponent(args.custom):args.site)+'_'+(args.JSReplaceURL?'1':'0')+'_'+(args.absoluteSite?'1':'0')+'_'+(args.hidden?'1':'0')+'_'+(args.replaceExternal?'1':'0')+'_'+(args.confirmation?'1':'0')+'; '+(clearOnExit?'Max-Age=2592000;':'')+' HttpOnly');
                 if (args.shareURL) {
-                    var {hostname} = new URL(args.custom?args.custom:decodeURIComponent(args.site));
+                    let {hostname} = new URL(args.custom?args.custom:decodeURIComponent(args.site));
                     res.setHeader('content-type', 'text/html; chartset=utf-8');
-                    var url = body?body:req.url.split('?').pop();
+                    let url = body?body:req.url.split('?').pop();
                     url=url.replace('shareURL=true', '').replaceAll('&&', '&');
                     if (url.endsWith('&')) {
                         url = url.substring(0, url.length-1);
                     }
-                    var html = '<html><head><meta name="viewport" content="width=device-width, initial-scale=1"><title>Share URL</title></head><body><br><center><p>drag the link below to your bookmark bar</p><p>Or right click and press copy link to share</p><p>or just click it to continue</p><a href="/changeSiteToServe?'+url+'">'+hostname+'</a></center></body></html>';
+                    let html = '<html><head><meta name="viewport" content="width=device-width, initial-scale=1"><title>Share URL</title></head><body><br><center><p>drag the link below to your bookmark bar</p><p>Or right click and press copy link to share</p><p>or just click it to continue</p><a href="/changeSiteToServe?'+url+'">'+hostname+'</a></center></body></html>';
                     html = bodyBuffer(html);
                     res.setHeader('content-length', html.byteLength);
                     res.writeHead(200);
@@ -121,7 +122,7 @@ module.exports = async function(req, res, optz) {
         }
     }
     res.setHeader('content-type', 'text/html; chartset=utf-8');
-    var html = '';
+    let html = '';
     html += '<html><head><title>Change Site to Serve</title><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><ul><br><h1>Change Site to Serve</h1><ul>';
     if (errMsg && errMsg.trim()) {
         html += '<p style="color:red;">Error: '+errMsg+'</p>';
@@ -133,7 +134,7 @@ module.exports = async function(req, res, optz) {
     } else if (adultContent) {
         html += '<p style="color:red;">Site restricted. Please contact the site owner for more information</p>';
     }
-    var customVal='',
+    let customVal='',
         rpSlashUrls=' checked',
         absoluteSite='',
         gc='',
@@ -141,7 +142,7 @@ module.exports = async function(req, res, optz) {
         share='',
         clearOnExit='';
     if (req.headers.cookie) {
-        var opts = getOpts(req.headers.cookie);
+        const opts = getOpts(req.headers.cookie);
         customVal = opts.site2Proxy || '';
         rpSlashUrls = opts.proxyJSReplace?' checked':'';
         absoluteSite = opts.isAbsoluteProxy?' checked':'';
@@ -158,8 +159,8 @@ module.exports = async function(req, res, optz) {
         clearOnExit = args.clearOnExit?' checked':''
     }
     html += '<form action="" method="POST" autocomplete="off">';
-    for (var i=0; i<sites.length; i++) {
-        var c = '';
+    for (let i=0; i<sites.length; i++) {
+        let c = '';
         if (sites[i][0] === customVal) {
             c = ' checked';
             customVal = '';
