@@ -22,7 +22,7 @@
         "name": "Force Site",
         "description": "Force Website to proxy. Only for the web interface.",
         "type": "string",
-        "default": "https://simplewebserver.org/"
+        "default": ""
       }
     ]
   }
