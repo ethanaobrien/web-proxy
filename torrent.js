@@ -1,22 +1,29 @@
+function getStage(args) {
+    if (args.download==='1'&&args.zip==='1') return "dlAsZip";
+    if (args.fileIndex||args.fileName) return "step2";
+    return "step1";
+}
+
 module.exports = async function(req, res) {
     //https://ogp.me
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.writeContinue();
+    if (req.url.includes("magnet:?")) {
+        redirect(req.url.split('magnet:?')[0]+'magnet='+encodeURIComponent(req.url.split('magnet:?').pop()), res, 301);
+        return;
+    }
     if (!req.url.includes('magnet=')) {
         res.writeHeader(400);
         res.end('invalid request');
         return;
     }
-    res.writeContinue();
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    let args = transformArgs(req.url);
-    let stage = function(args) {
-        if (args.download==='1'&&args.zip==='1') return "dlAsZip";
-        if (args.fileIndex||args.fileName) return "step2";
-        return "step1";
-    }(args);
     if (req.url.split('magnet=').pop().split('&')[0].includes('=')) {
         redirect(req.url.split('magnet=')[0]+'magnet='+encodeURIComponent(req.url.split('magnet=').pop()), res, 301);
         return;
     }
+    
+    let args = transformArgs(req.url);
+    
     let magnet = encodeURIComponent(args.magnet);
     let engine;
     try {
@@ -31,10 +38,13 @@ module.exports = async function(req, res) {
     }, 20000);
     await new Promise(resolve => engine.on('ready', resolve));
     clearTimeout(ready);
+    
     let files = engine.files;
     for (let i=0; i<files.length; i++) files[i].path=files[i].path.replaceAll('\\', '/');
-    let torrentName = engine.torrent.name;
-    if (stage === 'step1') {
+    const torrentName = engine.torrent.name;
+    let stage = getStage(args);
+    
+    if (stage === "step1") {
         let html = '<html><head><meta property="og:title" content="'+torrentName+'">';
         let cover = getFolderImage(files, magnet);
         if (cover) {

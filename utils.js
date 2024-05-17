@@ -21,7 +21,7 @@ module.exports = {
                 }
             })
             res.on('end', async function() {
-                if (res.headers['content-encoding'] && res.headers['content-encoding'] === 'gzip') {
+                if (res.headers['content-encoding'] === 'gzip') {
                     try {
                         body = await ungzip(body);
                     } catch(e){}

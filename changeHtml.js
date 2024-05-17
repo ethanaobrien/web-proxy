@@ -1,9 +1,7 @@
 module.exports = async function(req, res, optz) {
     let errMsg = '',
         adultContent = false;
-    if (typeof optz.forceSite !== undefined &&
-        typeof optz.forceSite == 'string' &&
-        optz.forceSite.trim() !== '') {
+    if (typeof optz.forceSite === 'string' && optz.forceSite.trim()) {
         let site = optz.forceSite;
         try {
             let result;
@@ -17,7 +15,7 @@ module.exports = async function(req, res, optz) {
             }
             site = newURL;
         } catch(e) {
-            res.end('Message for site owner: Invalid absolute url');
+            res.end("Message for site owner: Invalid absolute url");
             return;
         }
         res.setHeader('set-cookie', 'proxySettings='+encodeURIComponent(site)+'_1_1_0_0_0; Max-Age=2592000; HttpOnly');
