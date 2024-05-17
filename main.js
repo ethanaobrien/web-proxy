@@ -18,6 +18,7 @@ let a = require("./utils.js");
 for (const k in a) {
     if (!global[k]) global[k] = a[k];
 }
+
 //if you want to force a site to proxy, put url here
 //leave empty if not. Will set the client to absolute proxy mode
 
@@ -46,40 +47,25 @@ async function onRequest(req, res, optz, preventDefault) {
     let host = req.headers.host,
         url = req.url,
         method = req.method;
+    
+    // Torrent Stream to browser
     if (url.split('?')[0] === '/torrentStream' && optz.torrent) {
-        torrent(req, res);
-        return;
+        return torrent(req, res);
     }
     if (url === '/worker.js?proxyWorker=true') {
-        res.end("todo");
-        return;
+        return res.end("todo");
     }
-    /*
-    if (req.url === '/worker.js?proxyWorker=true') {
-        res.setHeader('content-type', 'text/javascript; chartset=utf-8');
-        try {
-            res.end(fs.readFileSync(require.resolve("./worker.js")));
-        } catch(e) {
-            res.end('error');
-            console.warn('error reading service worker file', e);
-        }
-        return;
-    }
-    */
     //YouTube Downloader
     if (url.split('?')[0] === '/yt' && optz.yt) {
-        yt(req, res);
-        return;
+        return yt(req, res);
     }
     // Url Shortener
     if (url.split('?')[0].toLowerCase().startsWith('/tinyurl')) {
-        urlShortener(req, res);
-        return;
+        return urlShortener(req, res);
     }
     // The site configuration page
     if (req.url.split('?')[0] === '/changeSiteToServe') {
-        changeHtml(req, res, optz);
-        return;
+        return changeHtml(req, res, optz);
     }
     let opts = getOpts(req.headers.cookie);
     if (url.startsWith('/http') && (url.substring(1).startsWith('https://'+req.headers.host) || url.substring(1).startsWith('https:/'+req.headers.host) || url.substring(1).startsWith('http://'+req.headers.host) || url.substring(1).startsWith('http:/'+req.headers.host))) {
@@ -126,9 +112,9 @@ async function onRequest(req, res, optz, preventDefault) {
             return;
         }
     }catch(e){};
+    
     if (req.url.split('?')[0] === '/hideTitle') {
-        hideTitle(req, res, opts);
-        return
+        return hideTitle(req, res, opts);
     }
     //TODO - encryption?
     if (opts.useHiddenPage && req.headers['sec-fetch-dest'] === 'document') {
@@ -148,7 +134,7 @@ async function onRequest(req, res, optz, preventDefault) {
         nc = true;
     }
 
-    let reqBody = {};
+    let reqBody;
     if (req.headers['content-type'] && req.headers['content-type'].includes('x-www-form-urlencoded')) {
         reqBody = {
             data: Buffer.from(parseTextFile((await consumeBody(req)).toString(), 'x-www-form-urlencoded', opts, url, host, false, optz)),
@@ -203,16 +189,16 @@ async function onRequest(req, res, optz, preventDefault) {
     }
 
     res.setHeader('x-frame-options', 'SAMEORIGIN');
-    if (vc === 'true' || vc === '1') {
+    if (["1", "true"].includes(vc)) {
         res.setHeader('content-type', 'text/plain');
     }
-    if (args.cors === 'true' || args.cors === '1') {
+    if (["1", "true"].includes(args.cors)) {
         res.setHeader('Access-Control-Allow-Origin', '*');
     }
     if (resp.isString) {
         //JavaScript/html parsing
         let body;
-        if (nc !== '1' && nc !== 'true' && nc !== true) {
+        if (![true, "true", "1"].includes(nc)) {
             body = parseTextFile(resp.body, resp.contentType, opts, url, host, opts.proxyJSReplace, optz);
         } else {
             body = resp.body;
