@@ -1,6 +1,81 @@
 module.exports = function(body, contentType, opts, url, reqHost, proxyJSReplace, optz) {
     let {site2Proxy,replaceExternalUrls} = opts;
-    let funcString = '\nwindow.addEventListener("DOMContentLoaded",function(){if(!window.checkInterval){var t,e,n;window.checkInterval=setInterval(function(){document.querySelectorAll("svg").forEach(t=>{t&&t.attributes&&t.attributes["aria-label"]&&t.attributes["aria-label"].textContent&&(t.innerHTML=t.attributes["aria-label"].textContent)})},200),window.fetch&&(window.fetch=(t=window.fetch,function(e,n){return n&&n.integrity&&delete n.integrity,t(o(e),n)})),window.XMLHttpRequest&&(window.XMLHttpRequest.prototype.open=(e=window.XMLHttpRequest.prototype.open,function(t,n,r,a,i){return e.apply(this,[t,o(n),r,a,i])})),window.WebSocket&&(window.WebSocket=(n=window.WebSocket,function(t,e){try{let{hostname:o}=new URL(t);!o===window.location.host&&(t=("https:"===window.location.protocol?"wss":"ws")+"://"+t)}catch(r){}return new n(t,e)}))}function o(t){try{t.startsWith("/")||new URL(t).hostname===window.location.hostname||(t="/"+t)}catch(e){!t.startsWith("/")&&t.startsWith("http")&&(t="/"+t)}return t}});\n';
+    let funcString = `
+(function() {
+    if (typeof window !== "undefined") {
+        window.addEventListener("DOMContentLoaded", function() {
+            const registerServiceWorker = async () => {
+                if ("serviceWorker" in navigator) {
+                    console.log("Attempting to register service worker");
+                    try {
+                        const registration = await navigator.serviceWorker.register("/worker.js?proxyWorker=true");
+                        if (registration.installing) {
+                            console.log("Service worker installing");
+                        } else if (registration.waiting) {
+                            console.log("Service worker installed");
+                        } else if (registration.active) {
+                            console.log("Service worker active");
+                        }
+                    } catch (error) {
+                        console.log("failed to start service worker", e);
+                    }
+                }
+            };
+            if (window.checkInterval) return;
+            registerServiceWorker();
+            window.checkInterval = setInterval(function() {
+                document.querySelectorAll("svg").forEach(e => {
+                    if (e && e.attributes && e.attributes["aria-label"] && e.attributes["aria-label"].textContent) {
+                        e.innerHTML = e.attributes["aria-label"].textContent
+                    }
+                })
+            }, 200);
+            function fixUrl(url) {
+                console.log("fixurl: ", url);
+                if (new URL(url).pathname.startsWith("/http")) return url;
+                try {
+                    if (!url.startsWith('/') && new URL(url).hostname !== window.location.hostname && ["http", "https"].includes(new URL(url).protocol)) {
+                        url = '/'+url;
+                    }
+                } catch(e) {
+                    if (url.startsWith('http')) {
+                        url = '/'+url;
+                    }
+                }
+                return url;
+            }
+            if (window.fetch) {
+                window.fetch = (function(oldFetch) {
+                    return function(url, opts) {
+                        if (opts && opts.integrity) delete opts.integrity;
+                        return oldFetch(fixUrl(url), opts);
+                    }
+                })(window.fetch);
+            }
+            if (window.XMLHttpRequest) {
+                window.XMLHttpRequest.prototype.open = (function(oldOpen) {
+                    return function(method, url, c, d, e) {
+                        return oldOpen.apply(this, [method, fixUrl(url), c, d, e]);
+                    }
+                })(window.XMLHttpRequest.prototype.open);
+            }
+            if (window.WebSocket) {
+                window.WebSocket = (function(oldSocket) {
+                    return function(url, prot) {
+                        try {
+                            let {hostname} = new URL(url);
+                            if (!hostname === window.location.host) {
+                                let prot = (window.location.protocol === 'https:') ? 'wss' : 'ws';
+                                url = prot+'://'+url;
+                            }
+                        } catch(e) {}
+                        return new oldSocket(url, prot);
+                    }
+                })(window.WebSocket)
+            }
+        })
+    }
+})();`;
     let date = new Date(),
         origBody = body,
         hn2 = new URL(url).hostname,
@@ -85,7 +160,11 @@ module.exports = function(body, contentType, opts, url, reqHost, proxyJSReplace,
             console.log('html parsing took '+(((new Date())-date)/1000)+' seconds');
         }
         body = '<script>'+funcString+'</script>\n'+body;
-        return body.replaceAll('/https://', '/https:/').replaceAll('/http://', '/https:/');
+        return body
+            .replaceAll('/https://', '/https:/')
+            .replaceAll('/http://', '/https:/')
+            .replaceAll('/http:/www.w3.org/', 'http://www.w3.org/')
+            .replaceAll('/https:/www.w3.org/', 'https://www.w3.org/');
     } else if (contentType.includes('x-www-form-urlencoded')) {
         let h = new URL(url).hostname;
         hostname = new URL(site2Proxy).hostname;
@@ -112,7 +191,9 @@ module.exports = function(body, contentType, opts, url, reqHost, proxyJSReplace,
         if (optz.debug) {
             console.log('url encoded parsing took '+(((new Date())-date)/1000)+' seconds');
         }
-        return body;
+        return body
+            .replaceAll('/http:/www.w3.org/', 'http://www.w3.org/')
+            .replaceAll('/https:/www.w3.org/', 'https://www.w3.org/');
     } else {
         if (proxyJSReplace) {
             let a = body.split('//');
@@ -126,71 +207,15 @@ module.exports = function(body, contentType, opts, url, reqHost, proxyJSReplace,
         }
         body = body.replaceAll('http://', '/http:/').replaceAll('https://', '/https:/');
         if (contentType.includes('javascript') && !url.includes('worker')) {
-            body = funcString+body;
+            body = body + "\n" + funcString;
         }
         if (optz.debug) {
             console.log('javascript parsing took '+(((new Date())-date)/1000)+' seconds');
         }
-        return body.replaceAll('/https://', '/https://').replaceAll('/http://', '/https://')
+        return body
+            .replaceAll('/https://', '/https://')
+            .replaceAll('/http://', '/https://')
+            .replaceAll('/http:/www.w3.org/', 'http://www.w3.org/')
+            .replaceAll('/https:/www.w3.org/', 'https://www.w3.org/');
     }
 }
-
-
-/*
-(function() {
-    if (typeof window !== undefined) {
-        window.addEventListener("DOMContentLoaded", function() {
-            if (window.checkInterval) return;
-            window.checkInterval = setInterval(function() {
-                document.querySelectorAll("svg").forEach(e => {
-                    if (e && e.attributes && e.attributes["aria-label"] && e.attributes["aria-label"].textContent) {
-                        e.innerHTML = e.attributes["aria-label"].textContent
-                    }
-                })
-            }, 200);
-            function fixUrl(url) {
-                try {
-                    if (!url.startsWith('/')&&new URL(url).hostname !== window.location.hostname) {
-                        url = '/'+url;
-                    }
-                } catch(e) {
-                    if (!url.startsWith('/') && url.startsWith('http')) {
-                        url = '/'+url;
-                    }
-                }
-                return url;
-            }
-            if (window.fetch) {
-                window.fetch = (function(oldFetch) {
-                    return function(url, opts) {
-                        if (opts && opts.integrity) delete opts.integrity;
-                        return oldFetch(fixUrl(url), opts);
-                    }
-                })(window.fetch);
-            }
-            if (window.XMLHttpRequest) {
-                window.XMLHttpRequest.prototype.open = (function(oldOpen) {
-                    return function(method, url, c, d, e) {
-                        return oldOpen.apply(this, [method, fixUrl(url), c, d, e]);
-                    }
-                })(window.XMLHttpRequest.prototype.open);
-            }
-            if (window.WebSocket) {
-                window.WebSocket = (function(oldSocket) {
-                    return function(url, prot) {
-                        try {
-                            let {hostname} = new URL(url);
-                            if (!hostname === window.location.host) {
-                                let prot = (window.location.protocol === 'https:') ? 'wss' : 'ws';
-                                url = prot+'://'+url;
-                            }
-                        } catch(e) {}
-                        return new oldSocket(url, prot);
-                    }
-                })(window.WebSocket)
-            }
-        })
-    }
-})();
-
-*/

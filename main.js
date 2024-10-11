@@ -53,7 +53,8 @@ async function onRequest(req, res, optz, preventDefault) {
         return torrent(req, res);
     }
     if (url === '/worker.js?proxyWorker=true') {
-        return res.end("todo");
+        res.setHeader("content-type", "application/javascript");
+        return res.end(fs.readFileSync(__dirname + "/worker.js"));
     }
     //YouTube Downloader
     if (url.split('?')[0] === '/yt' && optz.yt) {
@@ -189,6 +190,7 @@ async function onRequest(req, res, optz, preventDefault) {
     }
 
     res.setHeader('x-frame-options', 'SAMEORIGIN');
+
     if (["1", "true"].includes(vc)) {
         res.setHeader('content-type', 'text/plain');
     }
